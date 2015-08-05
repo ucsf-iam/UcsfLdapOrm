@@ -1,6 +1,6 @@
 # UcsfLdapOrm
 
-(Note: this repository will have it's codebase uploaded  during September 2015)
+<strong>(Note: this repository will have it's codebase uploaded  during September 2015)</strong>
 
 A Symfony bundle the provides ORM between Symfony and LDAP
 
