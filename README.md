@@ -17,7 +17,7 @@ What's changed and/or been added so far:
  * <code>"ucsf/ldaporm": "dev-master"</code>
 * Add the bundle to AppKernel.php
  * <code>new Ucsf\LdapOrmBundle\UcsfLdapOrmBundle()</code>
-*Install using composer
+* Install using composer
  * <code>$ composer update ucsf/ldaporm-bundle</code>
 
 ## Documentation
