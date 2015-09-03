@@ -23,7 +23,7 @@ class UcsfLdapOrmExtension extends Extension
         $config = $this->processConfiguration($configuration, $configs);
 
         // Make the configuration available as a parameter
-        $container->setParameter('ucsf_ldap_orm.config', $config);
+//        $container->setParameter('ucsf_ldap_orm', $config);
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yml');

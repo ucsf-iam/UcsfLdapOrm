@@ -2,8 +2,24 @@ parameters:
     ucsf_ldap_orm.entity_manager.class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
     ucsf_ldap_orm.twig_extention.class: Ucsf\LdapOrmBundle\Twig\Extension\LdapFilter
 
+    # The entity manager is instantiated as a service and one of its arguments are the
+    # configured parameters. While it and subclasses will have these parameters supplied
+    # in applications which use this bundle, loading the the base service in the container
+    # will complain if it has no configuration. The following parameters resolve the
+    # entity managers need for these parameters. It's just fluff that will be ignored.
+    ucsf_ldap_orm:
+        connection:
+            uri: ldaps://somehost/somepath
+            use_tls: false
+            bind_dn: cn=Some Name
+            password: aSecretWord
+        ldap:
+            base_dn: ou=something,dc=domain,dc=tld
+            password_type: plaintext
+
+
 services:
     ucsf_ldap_orm.entity_manager:
       class: %ucsf_ldap_orm.entity_manager.class%
-      arguments: [ @logger, @annotation_reader, %ucsf_ldap_orm.config% ]
+      arguments: [ @logger, @annotation_reader, %ucsf_ldap_orm% ]
 

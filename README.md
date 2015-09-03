@@ -23,3 +23,11 @@ What's changed and/or been added so far:
 ## Documentation
 
 * Coming soon... really.
+
+## To do
+
+1. ~~Remove need for generic LDAP config~~
+2. Configuration documentation
+3. Development example
+4. Rewrite test suite
+5. Remove deprecated search results iterator
