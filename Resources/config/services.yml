@@ -13,8 +13,6 @@ parameters:
             use_tls: false
             bind_dn: cn=Some Name
             password: aSecretWord
-        ldap:
-            base_dn: ou=something,dc=domain,dc=tld
             password_type: plaintext
 
 

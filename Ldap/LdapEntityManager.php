@@ -59,7 +59,6 @@ class LdapEntityManager
     private $uri        	= "";
     private $bindDN     	= "";
     private $password   	= "";
-    private $baseDN     	= "";
     private $passwordType 	= "";
     private $useTLS     	= FALSE;
 
@@ -82,8 +81,7 @@ class LdapEntityManager
         $this->uri        	= $config['connection']['uri'];
         $this->bindDN     	= $config['connection']['bind_dn'];
         $this->password   	= $config['connection']['password'];
-        $this->baseDN     	= $config['ldap']['base_dn'];
-	$this->passwordType 	= $config['ldap']['password_type'];
+        $this->passwordType = $config['connection']['password_type'];
         $this->useTLS     	= $config['connection']['use_tls'];
         $this->reader     	= $reader;
     }
@@ -283,7 +281,14 @@ class LdapEntityManager
 
                     $sequence = $this->renderString($instanceMetadataCollection->getSequence($instanceMetadataCollection->getKey($varname)), array(
                         'entity' => $instance,
+                        /*
+                         * In the original source code for the bundle upon which UcsfLdapOrm is based, it was
+                         * assumed that you'd only be looking for records under a single base DN. Therefore,
+                         * configuration for the DN was put into configuration files. This bundle permits you to
+                         * search any number of base DNsw
+                         *
                         'baseDN' => $this->baseDN,
+                         */
                     ));
 
                     $value = (int) $this->generateSequenceValue($sequence);
@@ -363,10 +368,7 @@ class LdapEntityManager
             }
         }
 
-        $entityDn =  $this->renderString($dnModel, array(
-                'entity' => $instance,
-                'baseDN' => $this->baseDN,
-                ));
+        $entityDn =  $this->renderString($dnModel, array('entity' => $instance));
 
         return $entityDn;
     }
@@ -619,6 +621,10 @@ class LdapEntityManager
         } else {
             $searchDn = $options['searchDn'];
         }
+
+        if (empty($searchDn)) {
+            throw new MissingSearchDn('Could not discern search DN while searching for '.$entityName);
+        }
         
         // Discern LDAP filter
         $objectClass = $instanceMetadataCollection->getObjectClass();
@@ -736,11 +742,10 @@ class LdapEntityManager
         return ldap_next_entry($this->ldapResource, $rawResult);
     }
 
-    public function doRawLdapSearch($rawFilter, $attributes, $count, $searchDN = null)
+    public function doRawLdapSearch($rawFilter, $attributes, $count, $searchDN)
     {
         // Connect if needed
         $this->connect();
-        $searchDN = ($searchDN == null) ? $this->baseDN : $searchDN;
         $this->logger->info(sprintf("request on ldap root:%s with filter:%s", $searchDN, $rawFilter));
         return ldap_search($this->ldapResource,
             $searchDN,
@@ -867,3 +872,5 @@ class LdapEntityManager
 }
 
 class MissingMustAttributeException extends \Exception {}
+
+class MissingSearchDn extends \Exception {}

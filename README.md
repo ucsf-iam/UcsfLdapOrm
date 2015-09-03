@@ -22,7 +22,9 @@ What's changed and/or been added so far:
 
 ## Documentation
 
-* Coming soon... really.
+* Configure an LDAP service
+
+
 
 ## To do
 
