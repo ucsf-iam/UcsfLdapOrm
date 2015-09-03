@@ -23,8 +23,8 @@
     "autoload": {
         "psr-0": { "Ucsf\\LdapOrmBundle": "" }
     },
-    "minimum-stability": "stable",
-    "target-dir": "Ucsf/LdapOrmBundle",
+    "minimum-stability": "dev",
+    "target-dir": "ucsf/LdapOrmBundle",
     "extra": {
     }
 }
