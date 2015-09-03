@@ -14,11 +14,11 @@ What's changed and/or been added so far:
 ## Installation
 
 * Add to composer.json
-** <code>"ucsf/ldaporm": "dev-master"</code>
+ * <code>"ucsf/ldaporm": "dev-master"</code>
 * Add the bundle to AppKernel.php
-** <code>new Ucsf\LdapOrmBundle\UcsfLdapOrmBundle()</code>
+ * <code>new Ucsf\LdapOrmBundle\UcsfLdapOrmBundle()</code>
 *Install using composer
-** <code>$ composer update ucsf/ldaporm-bundle</code>
+ * <code>$ composer update ucsf/ldaporm-bundle</code>
 
 ## Documentation
 
