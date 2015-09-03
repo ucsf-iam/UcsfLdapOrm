@@ -1,0 +1,9 @@
+parameters:
+    ucsf_ldap_orm.entity_manager.class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
+    ucsf_ldap_orm.twig_extention.class: Ucsf\LdapOrmBundle\Twig\Extension\LdapFilter
+
+services:
+    ucsf_ldap_orm.entity_manager:
+      class: %ucsf_ldap_orm.entity_manager.class%
+      arguments: [ @logger, @annotation_reader, %ucsf_ldap_orm.config% ]
+

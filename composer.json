@@ -1,0 +1,30 @@
+{
+    "name": "ucsf/ldaporm-bundle",
+    "type": "symfony-bundle",
+    "description": "Another LDAP ORM for Symfony2",
+    "keywords": ["ucsf", "orm", "ldap"],
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "Jason Gabler",
+            "email": "jason.gabler@ucsf.edu"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.9",
+        "symfony/http-kernel": "2.*",
+        "symfony/dependency-injection": "2.*",
+        "symfony/framework-bundle": "2.*",
+        "symfony/class-loader": "2.*",
+        "symfony/yaml": "2.*",
+        "symfony/monolog-bundle": "2.*",
+        "symfony/twig-bundle": "2.*"
+    },
+    "autoload": {
+        "psr-0": { "Ucsf\\LdapOrmBundle": "" }
+    },
+    "minimum-stability": "stable",
+    "target-dir": "Ucsf/LdapOrmBundle",
+    "extra": {
+    }
+}
