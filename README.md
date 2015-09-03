@@ -24,7 +24,7 @@ What's changed and/or been added so far:
 
 ### Configuration of LDAP Services
 
-`
+```
 my_ldap_service:
     connection:
         uri: ldaps://ldap.example.com
@@ -32,7 +32,7 @@ my_ldap_service:
         bind_dn: cn=admin,dc=example,dc=com
         password: shhhItsASecret
         password_type: plaintext
-`
+```
 
 * __uri__: The URI you need for connecting to the LDAP service.
 * __use_tls__: 'true' or 'false' to decide on connecting with TLS
@@ -42,7 +42,7 @@ my_ldap_service:
 
 ### How to develop with UcsfLdapOrm
 
-See [here](DEVELOP.md)...
+See [here](/DEVELOP.md)...
 
 ## To do
 
