@@ -6,8 +6,8 @@
     "license": "GPL",
     "authors": [
         {
-            "name": "Jason Gabler",
-            "email": "jason.gabler@ucsf.edu"
+            "name": "UCSF IT Identity & Access Management",
+            "email": "iam-team@ucsf.edu"
         }
     ],
     "require": {
