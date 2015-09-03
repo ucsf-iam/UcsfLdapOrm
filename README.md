@@ -10,3 +10,16 @@ What's changed and/or been added so far:
 * Added added many subclasses of <code>LdapEntity</code> to describe the object classes from <code>top</code> to  <code>InetOrgPerson</code>.
 * Added <code>Repository::filterByComplex()</code> which gives the entity manager/repository the ability to filter with custom constructed, complex boolean logic.
 * Removed the dependency upon <a href="https://github.com/r1pp3rj4ck">r1pp3rj4ck</a>'s <a href="https://github.com/r1pp3rj4ck/TwigstringBundle">TwigstringBundle</a> and replaced it with Symfony 2.6+'s ability to use Twig's new-ish string-as-template functionality.
+
+## Installation
+
+* Add to composer.json
+** <code>"ucsf/ldaporm": "dev-master"</code>
+* Add the bundle to AppKernel.php
+** <code>new Ucsf\LdapOrmBundle\UcsfLdapOrmBundle()</code>
+*Install using composer
+** <code>$ composer update ucsf/ldaporm-bundle</code>
+
+## Documentation
+
+* Coming soon... really.
