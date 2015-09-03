@@ -22,9 +22,27 @@ What's changed and/or been added so far:
 
 ## Documentation
 
-* Configure an LDAP service
+### Configuration of LDAP Services
 
+`
+my_ldap_service:
+    connection:
+        uri: ldaps://ldap.example.com
+        use_tls: true
+        bind_dn: cn=admin,dc=example,dc=com
+        password: shhhItsASecret
+        password_type: plaintext
+`
 
+* __uri__: The URI you need for connecting to the LDAP service.
+* __use_tls__: 'true' or 'false' to decide on connecting with TLS
+* __bind_dn__: The DN for binding to the LDAP service
+* __password__: The password associate with the given bind DN
+* __password_type__: sha1, plaintext. I use plaintext when the URI is for LDAPS.
+
+### How to develop with UcsfLdapOrm
+
+See [here](DEVELOP.md)...
 
 ## To do
 
