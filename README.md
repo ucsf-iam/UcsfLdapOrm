@@ -22,10 +22,12 @@ What's changed and/or been added so far:
 
 ## Documentation
 
-### Configuration of LDAP Services
+### Develop with UcsfLdapOrm
+
+#### Configuration an LDAP service in config.yml
 
 ```
-my_ldap_service:
+myldap_service:
     connection:
         uri: ldaps://ldap.example.com
         use_tls: true
@@ -38,11 +40,101 @@ my_ldap_service:
 * __use_tls__: 'true' or 'false' to decide on connecting with TLS
 * __bind_dn__: The DN for binding to the LDAP service
 * __password__: The password associate with the given bind DN
-* __password_type__: sha1, plaintext. I use plaintext when the URI is for LDAPS.
+* __password_type__: sha1, plaintext. I use plaintext when the URI is LDAPS.
 
-### How to develop with UcsfLdapOrm
+#### Dependency injection for LDAP Entity Managers and Services
 
-See [here](/DEVELOP.md)...
+```
+services:
+    myldap_entity_manager:
+        class: %ucsf_ldap_orm.entity_manager.class%
+        arguments: ["@logger", "@annotation_reader", "%myldap_service%"]
+    myorgperson_service:
+        class: MyBundle\MyOrgPersonService
+        arguments: [ @myldap_entity_manager ]
+```
+
+#### Creating Entities (usually to represent an object class)
+
+```
+/**
+ * Represents a MyPerson object class, which is a subclass of InetOrgPerson
+ * 
+ * @ObjectClass("ucsfEduPerson")
+ * @SearchDn("ou=people,dc=ucsf,dc=edu")
+ * @Dn("uid={{ entity.uid }},ou=people,dc=ucsf,dc=edu")
+ */
+class MyPerson extends InetOrgPerson
+{
+    /**
+     * @Attribute("thing")
+     * @Must()
+     * @ArrayField()
+     * 
+     * The @Attribute annotation relates the $thing member variable to the 'thing' attribute
+     * with the MyPerson object class in LDAP
+     *
+     * The @Must annotation requires this attribute to not be empty when persisting back to LDAP.
+     * 
+     * The @ArrayField aannotation tells the LDAP Entity Manager, repositories and services to treat
+     * this attribute as a multi-value LDAP field
+     */
+    protected $thing;
+    
+    ...
+    
+    public function getThing() {
+        return $this->thing;
+    }
+    
+    public function setThing($thing) {
+        $this->thing = $thing;
+    }
+    
+    ...
+}
+
+
+#### Coding the Service
+
+```
+class MyOrgPersonService {
+
+    protected $myOrgPersonRepository;
+
+    public function __construct(LdapEntityManager $entityManager) {
+        // Make a repo for MyOrgPerson entities
+        $this->myOrgPersonRepository = $entityManager->getRepository(MyOrgPerson::class);
+        // Make a another repo for SomethignElse entities
+        $this->somethingElseRepository = $entityManager->getRepository(SomethingElse::class);
+        ...
+    }
+            
+    public function getPersonByUid($uid, $includeAddress = false, $attributes = null) {
+        $person = $this->ucsfEduPersonRepository->findByUid($uid, $attributes);
+        ...
+        return $person;
+    }
+        
+```
+
+#### A Controller... to Round it Out
+
+````
+    class PeopleController extends Controller {
+
+        /**
+         * @Route("/person/detail/{uid}/{rest}")
+         * @Template()
+         */
+        public function detailAction(Request $request, $uid)
+        {
+            $myOrgPersonService = $this->get('myorgperson_service');
+            $person = $myOrgPersonService->getPersonByUid($uid);
+            ...
+            return array('person' => $person);
+        }
+````
 
 ## To do
 
