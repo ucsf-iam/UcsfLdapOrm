@@ -60,9 +60,9 @@ services:
 /**
  * Represents a MyPerson object class, which is a subclass of InetOrgPerson
  * 
- * @ObjectClass("ucsfEduPerson")
- * @SearchDn("ou=people,dc=ucsf,dc=edu")
- * @Dn("uid={{ entity.uid }},ou=people,dc=ucsf,dc=edu")
+ * @ObjectClass("myPerson")
+ * @SearchDn("ou=people,dc=example,dc=come")
+ * @Dn("uid={{ entity.uid }},ou=people,dc=example,dc=com")
  */
 class MyPerson extends InetOrgPerson
 {
@@ -111,7 +111,7 @@ class MyOrgPersonService {
     }
             
     public function getPersonByUid($uid, $includeAddress = false, $attributes = null) {
-        $person = $this->ucsfEduPersonRepository->findByUid($uid, $attributes);
+        $person = $this->myOrgPersonRepository->findByUid($uid, $attributes);
         ...
         return $person;
     }
