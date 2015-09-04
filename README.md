@@ -24,7 +24,7 @@ What's changed and/or been added so far:
 
 ### Develop with UcsfLdapOrm
 
-#### Configuration an LDAP service in config.yml
+#### Configure an LDAP service in config.yml
 
 ```
 myldap_service:
@@ -47,7 +47,7 @@ myldap_service:
 ```
 services:
     myldap_entity_manager:
-        class: %ucsf_ldap_orm.entity_manager.class%
+        class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
         arguments: ["@logger", "@annotation_reader", "%myldap_service%"]
     myorgperson_service:
         class: MyBundle\MyOrgPersonService

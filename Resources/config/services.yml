@@ -1,7 +1,4 @@
 parameters:
-    ucsf_ldap_orm.entity_manager.class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
-    ucsf_ldap_orm.twig_extention.class: Ucsf\LdapOrmBundle\Twig\Extension\LdapFilter
-
     # The entity manager is instantiated as a service and one of its arguments are the
     # configured parameters. While it and subclasses will have these parameters supplied
     # in applications which use this bundle, loading the the base service in the container
@@ -18,6 +15,6 @@ parameters:
 
 services:
     ucsf_ldap_orm.entity_manager:
-      class: %ucsf_ldap_orm.entity_manager.class%
+      class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
       arguments: [ @logger, @annotation_reader, %ucsf_ldap_orm% ]
 
