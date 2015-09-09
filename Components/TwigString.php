@@ -29,11 +29,8 @@ class TwigString implements \Twig_LoaderInterface{
     }
 
     public function render($string, $variables) {
-//        error_log('STRING: '.$string);
-//        error_log('VARIABLES: '.print_r($variables, TRUE));
         $twig = new \Twig_Environment($this);
         $rendered = $twig->render($string, $variables);
-//        error_log('RENDERED: '.$rendered);
         return $rendered;
     }
 }
