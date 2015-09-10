@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
-use IAM\DirectoryServicesBundle\Util;
+use IAM\DirectoryServicesBundle\Util\Phone;
 
 /**
  * Standard LDAP InetOrgPerson. May be used as a Symfony user.
@@ -157,23 +157,7 @@ class InetOrgPerson extends OrganizationalPerson
      * @Attribute("x500UniqueIdentifier")
      */
     protected $x500UniqueIdentifier;
-    
-    /* **************************************************************************************************************
-     * Custom LDAP field functions and helpers
-     * **************************************************************************************************************/    
-    
-    public function getMobileView() {
-        return Util::telephoneNumberView($this->mobile);
-    }
-    
-    public function getMobileDial() {
-        return Util::telephoneNumberDial($this->mobile);
-    } 
-    
-    /* **************************************************************************************************************
-     * Standard LDAP field functions
-     * **************************************************************************************************************/            
-           
+
     function getAudio() {
         return $this->audio;
     }

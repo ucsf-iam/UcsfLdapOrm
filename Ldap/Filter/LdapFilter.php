@@ -192,8 +192,8 @@ class LdapFilter
     
     public static function escapeLdapValue($val) {
         return str_replace(
-                array('='   , ','),
-                array('\\3d', '\\2c'),
+                array('=', ',', '(', ')'),
+                array('\\3d', '\\2c', '\\28', '\\29'),
                 $val);
     }
 

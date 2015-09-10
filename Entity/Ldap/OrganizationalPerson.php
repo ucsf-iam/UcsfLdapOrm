@@ -5,7 +5,7 @@ namespace Ucsf\LdapOrmBundle\Entity\Ldap;
 use Doctrine\ORM\Mapping as ORM;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
-use IAM\DirectoryServicesBundle\Util;
+use IAM\DirectoryServicesBundle\Util\Phone;
 
 /**
  * Standard LDAP OrganizationalPerson. May be used as a Symfony user.
@@ -111,23 +111,7 @@ class OrganizationalPerson extends Person
      * @Attribute("x121Address")
      */
     protected $x121Address;    
-    
-    /* **************************************************************************************************************
-     * Custom LDAP field functions and helpers
-     * **************************************************************************************************************/    
-    
-    public function getFacsimileTelephoneNumberView() {
-        return Util::telephoneNumberView($this->facsimileTelephoneNumber);
-    }
-    
-    public function getFacsimileTelephoneNumberDial() {
-        return Util::telephoneNumberDial($this->facsimileTelephoneNumber);
-    }     
-    
-    /* **************************************************************************************************************
-     * Standard LDAP field functions
-     * **************************************************************************************************************/            
-       
+
     function getDescription() {
         return $this->description;
     }

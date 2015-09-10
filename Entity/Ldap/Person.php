@@ -7,7 +7,7 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Must;
-use IAM\DirectoryServicesBundle\Util;
+use IAM\DirectoryServicesBundle\Util\Phone;
 use Symfony\Component\Security\Core\User\EquatableInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -48,31 +48,7 @@ class Person extends LdapEntity implements UserInterface, EquatableInterface
      * @ArrayField()
      */
     protected $userPassword;
-    
-    /* **************************************************************************************************************
-     * Custom LDAP field functions and helpers
-     * **************************************************************************************************************/    
 
-    public function getTelephoneNumberView() {
-        return empty($this->telephoneNumber) ? $this->telephoneNumber : Util::telephoneNumberView($this->telephoneNumber);
-    }
-    
-    public function getTelephoneNumberDial() {
-        return empty($this->telephoneNumber) ? $this->telephoneNumber : Util::telephoneNumberDial($this->telephoneNumber);
-    }    
-    
-    public function getTelephoneNumberEds() {
-        return empty($this->telephoneNumber) ? $this->telephoneNumber : Util::telephoneNumberEds($this->telephoneNumber);
-    }
-    
-    public function getTelephoneNumberCls() {
-        return empty($this->telephoneNumber) ? $this->telephoneNumber : Util::telephoneNumberCls($this->telephoneNumber);
-    }    
-
-    /* **************************************************************************************************************
-     * Standard LDAP field functions
-     * **************************************************************************************************************/        
-   
     function getSn() {
         return $this->sn;
     }
