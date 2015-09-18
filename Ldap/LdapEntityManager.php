@@ -55,7 +55,7 @@ use Symfony\Bridge\Monolog\Logger;
 class LdapEntityManager
 {
     const DEFAULT_MAX_RESULT_COUNT      = 100;
-    
+
     private $uri        	= "";
     private $bindDN     	= "";
     private $password   	= "";
@@ -63,6 +63,8 @@ class LdapEntityManager
     private $useTLS     	= FALSE;
 
     private $ldapResource;
+    private $pageCookie 	= "";
+    private $pageMore    	= FALSE;
     private $reader;
     
     private $iterator = Null;
@@ -87,9 +89,9 @@ class LdapEntityManager
     }
 
     /**
-     * Connect to GrAM database
+     * Connect to LDAP service
      * 
-     * @return resource
+     * @return LDAP resource
      */
     private function connect()
     {
@@ -589,28 +591,43 @@ class LdapEntityManager
      * The core of ORM behavior for this bundle: retrieve data
      * from LDAP and convert results into objects.
      * 
-     * Options maybe 'attributes', 'filter', 'max', 'searchDn', 'subentryNodes' 
+     * Options maybe:
      *
-     * attributes: array of attribute types (strings) 
-     * filter: a LdapFilter object, a filter array or a correctly formatted filter string
-     * max: the maximum limit of entries to return
-     * searchDn: the search DN
-     * subentryNodes: parameters for the left hand side of a searchDN, useful for mining subentries.
-     * pageSize: initiate pagination and return pages of the given size
-     * checkOnly: Only check result existance. Don't convery search results to ORM object. NOTE: Returns boolean.
+     * attributes (array): array of attribute types (strings)
+     * filter (LdapFilter): a filter array or a correctly formatted filter string
+     * max (integer): the maximum limit of entries to return
+     * searchDn (string): the search DN
+     * subentryNodes (array): parameters for the left hand side of a searchDN, useful for mining subentries.
+     * pageSize (integer): employ pagination and return pages of the given size
+     * pageCookie (opaque): The opaque stucture sent by the LDAP server to maintain pagination state. Defaults is empty string.
+     * pageCritical (boolean): if pagination employed, force paging and return no results on service which do not provide it. Default is true.
+     * checkOnly (boolean): Only check result existence; don't convert search results to Symfony entities. Default is false.
      *
-     * 
-     * 
      * @param type $entityName
      * @param type $options
      * @return type
      */
     public function retrieve($entityName, $options = array())
     {
+        $paging = !empty($options['pageSize']);
+
         $instanceMetadataCollection = $this->getClassMetadata($entityName);
 
         // Discern max result size
         $max = empty($options['max']) ? self::DEFAULT_MAX_RESULT_COUNT : $options['max'];
+
+        // Employ results paging if requested with pageSize option
+        if ($paging) {
+            if (!isset($options['pageCritical'])) {
+                $options['pageCritical'] = FALSE;
+            }
+            if (isset($options['pageCookie'])) {
+                $this->pageCookie = $options['pageCookie'];
+            }
+
+            $this->connect();
+            ldap_control_paged_result($this->ldapResource, $options['pageSize'], $options['pageCritical'], $this->pageCookie);
+        }
 
         // Discern subentryNodes for substituing into searchDN
         $subentryNodes = empty($options['subentryNodes']) ? array() : $options['subentryNodes'];
@@ -664,6 +681,7 @@ class LdapEntityManager
 
         // Search LDAP
         $searchResult = $this->doRawLdapSearch($filter, $attributes, $max, $searchDn);
+
         $entries = ldap_get_entries($this->ldapResource, $searchResult);
         if (!empty($options['checkOnly']) && $options['checkOnly'] == true) {
             return ($entries['count'] > 0);
@@ -675,8 +693,32 @@ class LdapEntityManager
             }
         }
 
+        if ($paging) {
+            ldap_control_paged_result_response($this->ldapResource, $searchResult, $this->pageCookie);
+            $this->pageMore = !empty($this->pageCookie);
+        }
+
         return $entities;
     }
+
+    /**
+     * Get the PHP LDAP pagination cookie
+     * @return string
+     */
+    public function getPageCookie()
+    {
+        return $this->pageCookie;
+    }
+
+    /**
+     * Check if the results pager has more results to return
+     * @return boolean
+     */
+    public function pageHasMore()
+    {
+        return $this->pageMore;
+    }
+
 
 
     /**

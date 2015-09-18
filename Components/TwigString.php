@@ -12,19 +12,21 @@ namespace Ucsf\LdapOrmBundle\Components;
 class TwigString implements \Twig_LoaderInterface{
     public function getSource($name)
     {
-        // get from database
         return $name;
     }
 
     public function isFresh($name, $time)
     {
-        // determine from database
+        return true;
+    }
+
+    public function exists($name)
+    {
         return true;
     }
 
     public function getCacheKey($name)
     {
-        // check if exists
         return 'twigStringService:' . $name;
     }
 
