@@ -2,16 +2,18 @@
 
 A Symfony bundle that provides ORM over LDAP.
 
-This code was originally based upon <a href="https://github.com/matgou">Mathieu Goulin</a>'s <a href="https://github.com/matgou/GorgLdapOrmBundle">GorgLdapOrmBundle</a>. We are forever indebted to him for providing an excellent base for the work we've continueD at UCSF IT Identity & Access Management. Originally we forked GorgLdapOrmBundle but, as our development continued to diverge and added new functionality, we came to the point where it was time to strike out on our own. The UcsfLdapOrm repo was created as that fresh start.
+This code was originally based upon <a href="https://github.com/matgou">Mathieu Goulin</a>'s <a href="https://github.com/matgou/GorgLdapOrmBundle">GorgLdapOrmBundle</a>. We are forever indebted to him for providing an excellent base for the work we've continued at UCSF IT Identity & Access Management. Originally we forked GorgLdapOrmBundle but, as our development continued to diverge and added new functionality, we came to the point where it was time to strike out on our own. The UcsfLdapOrm repo was created as that fresh start.
 
 What's changed and/or been added so far:
 
 * Added the <code>LdapEntity</code> class. This is a Symfony entity which represents the <code>top</code> LDAP object class.
-* Added added many subclasses of <code>LdapEntity</code> to describe the object classes from <code>top</code> down to  <code>InetOrgPerson</code>.
+* Added many subclasses of <code>LdapEntity</code> to describe the object classes from <code>top</code> down to  <code>InetOrgPerson</code>.
 * Added <code>Repository::filterByComplex()</code> which gives the entity manager/repository the ability to filter with custom constructed, complex boolean logic. (See code comment API documentation for details.)
 * Removed the dependency upon <a href="https://github.com/r1pp3rj4ck">r1pp3rj4ck</a>'s <a href="https://github.com/r1pp3rj4ck/TwigstringBundle">TwigstringBundle</a> and replaced it with Symfony 2.6+'s ability to use Twig's new-ish string-as-template functionality.
 
 ## Installation
+
+Requires PHP5.5+ and Symphony 2.7+
 
 * Add to composer.json
  * <code>"ucsf/ldaporm": "dev-master"</code>
@@ -27,7 +29,7 @@ What's changed and/or been added so far:
 #### Configure an LDAP service in config.yml
 
 ```
-myldap_service:
+some_ldap_server:
     connection:
         uri: ldaps://ldap.example.com
         use_tls: true
@@ -48,9 +50,9 @@ myldap_service:
 services:
     myldap_entity_manager:
         class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
-        arguments: ["@logger", "@annotation_reader", "%myldap_service%"]
-    myperson_service:
-        class: MyBundle\MyPersonService
+        arguments: ["@logger", "@annotation_reader", "%some_ldap_server%"]
+    comexample_person_service:
+        class: MyBundle\ComExamplePersonService
         arguments: [ @myldap_entity_manager ]
 ```
 
@@ -58,39 +60,43 @@ services:
 
 ```
 /**
- * Represents a MyPerson object class, which is a subclass of InetOrgPerson
+ * Represents a ComExamplePerson object class, which is a subclass of InetOrgPerson
  * 
- * @ObjectClass("myPerson")
+ * @ObjectClass("comExamplePerson")
  * @SearchDn("ou=people,dc=example,dc=come")
  * @Dn("uid={{ entity.uid }},ou=people,dc=example,dc=com")
  */
-class MyPerson extends InetOrgPerson
+class ComExamplePerson extends InetOrgPerson
 {
     /**
-     * @Attribute("thing")
+     * @Attribute("comExampleFavoriteIceCreamFlavor")
      * @Must()
      * @ArrayField()
      * 
-     * The @Attribute annotation relates the $thing member variable to the 'thing' attribute
-     * within the MyPerson object class in LDAP
+     * The @Attribute annotation relates the $comExampleFavoriteIceCreamFlavor member variable to the
+     * 'comExampleFavoriteIceCreamFlavor' attribute within the ComExamplePerson object class in LDAP. 
+     * You don't have to name the PHP variable the same as your attribute name, but it helps to be
+     * consistent in this way.
      *
-     * The @Must annotation requires this attribute to not be empty when persisting back to LDAP. If a @Must requirement
-     * is not satisfied, attempting to persist the entry will throw a MissingMustAttributeException.
+     * The @Must annotation requires this attribute to not be empty when persisting back to LDAP. If 
+     * a @Must requirement is not satisfied, attempting to persist the entry will throw
+     * a MissingMustAttributeException.
      *
      * The @ArrayField aannotation tells the LDAP Entity Manager, repositories and services to treat
      * this attribute as a multi-value LDAP field. This is unfortunately backwards from LDAP's default
-     * to multi-value. This will probably not be "fixed".
+     * to multi-value an attribute. Baring miracles (i.e. finding the time), this will probably not be "fixed".
+     *
      */
-    protected $thing;
+    protected $comExampleFavoriteIceCreamFlavor;
     
     ...
     
-    public function getThing() {
-        return $this->thing;
+    public function getComExampleFavoriteIceCreamFlavor() {
+        return $this->comExampleFavoriteIceCreamFlavor;
     }
     
-    public function setThing($thing) {
-        $this->thing = $thing;
+    public function setComExampleFavoriteIceCreamFlavor($comExampleFavoriteIceCreamFlavor) {
+        $this->comExampleFavoriteIceCreamFlavor = $comExampleFavoriteIceCreamFlavor;
     }
     
     ...
@@ -100,20 +106,20 @@ class MyPerson extends InetOrgPerson
 #### Coding the Service
 
 ```
-class MyPersonService {
+class ComExamplePersonService {
 
-    protected $myPersonRepository;
+    protected $comExamplePersonRepository;
 
     public function __construct(LdapEntityManager $entityManager) {
-        // Make a repo for MyPerson entities
-        $this->myPersonRepository = $entityManager->getRepository(MyPerson::class);
-        // Make a another repo for SomethignElse entities
+        // Make a repo for ComExamplePerson entities
+        $this->comExamplePersonRepository = $entityManager->getRepository(ComExamplePerson::class);
+        // Make a another repo for SomethignElse entities (just another example...)
         $this->somethingElseRepository = $entityManager->getRepository(SomethingElse::class);
         ...
     }
             
     public function getPersonByUid($uid, $includeAddress = false, $attributes = null) {
-        $person = $this->myPersonRepository->findByUid($uid, $attributes);
+        $person = $this->comExampePersonRepository->findByUid($uid, $attributes);
         ...
         return $person;
     }
@@ -126,13 +132,13 @@ class MyPersonService {
     class PeopleController extends Controller {
 
         /**
-         * @Route("/person/detail/{uid}/{rest}")
+         * @Route("/person/detail/{uid}")
          * @Template()
          */
         public function detailAction(Request $request, $uid)
         {
-            $myPersonService = $this->get('myperson_service');
-            $person = $myPersonService->getPersonByUid($uid);
+            $comExamplePersonService = $this->get('comexample_person_service');
+            $person = $comExamplePersonService->getPersonByUid($uid);
             ...
             return array('person' => $person);
         }
@@ -143,5 +149,5 @@ class MyPersonService {
 1. ~~Remove need for generic LDAP config~~
 2. ~~Configuration documentation~~
 3. ~~Development example~~
-4. Rewrite test suite
+4. Rewrite test suite (In progress...)
 5. Remove deprecated search results iterator
