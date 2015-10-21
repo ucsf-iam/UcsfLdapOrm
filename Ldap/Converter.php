@@ -31,6 +31,8 @@ use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
  */
 class Converter
 {
+    // round((1970-1601)/4) = round(92.25) = 92
+    const UNIX_EPOCH_DIFFERENCE = ((1970-1601) * 365 - 3 + 92 ) * 86400;
 
     /**
      * Convert an LDAP-Generalized-Time-entry into a DateTimeDecorator-Object
@@ -158,6 +160,21 @@ class Converter
         return $date;
     }
 
+    public static function fromAdDateTime($adDate, $asUtc = true) {
+        $adSeconds = str_replace('.0Z', '', $adDate) / (10000000);
+        $unixTimestamp = $adSeconds - self::UNIX_EPOCH_DIFFERENCE;
+        $ldapDate = date("YmdHis", $unixTimestamp).'Z';
+        return self::fromLdapDateTime($ldapDate, $asUtc);
+    }
+
+    public static function toAdDateTime($date, $asUtc = true) {
+        $ldapDate = self::toLdapDateTime($date, $asUtc).'';
+        $asDateTime = \DateTime::createFromFormat('YmdHis', str_replace('+0000', '', $ldapDate));
+        $unixTimestamp = $asDateTime->format('U');
+        $adSeconds = $unixTimestamp + self::UNIX_EPOCH_DIFFERENCE;
+        $adTime = ($adSeconds * 10000000).'.0Z';
+        return $adTime;
+    }
 
     /**
      * Converts a date-entity to an LDAP-compatible date-string

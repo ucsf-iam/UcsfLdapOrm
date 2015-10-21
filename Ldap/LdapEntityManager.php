@@ -61,6 +61,7 @@ class LdapEntityManager
     private $password   	= "";
     private $passwordType 	= "";
     private $useTLS     	= FALSE;
+    private $isActiveDirectory = FALSE;
 
     private $ldapResource;
     private $pageCookie 	= "";
@@ -85,6 +86,7 @@ class LdapEntityManager
         $this->password   	= $config['connection']['password'];
         $this->passwordType = $config['connection']['password_type'];
         $this->useTLS     	= $config['connection']['use_tls'];
+        $this->isActiveDirectory = !empty($config['connection']['active_directory']);
         $this->reader     	= $reader;
     }
 
@@ -856,7 +858,11 @@ class LdapEntityManager
                 }
                 try {
                     if(preg_match('/^\d{14}/', $entryData[$attrValue][0])) {
-                        $datetime = Converter::fromLdapDateTime($entryData[$attrValue][0], false);
+                        if ($this->isActiveDirectory) {
+                            $datetime = Converter::fromAdDateTime($entryData[$attrValue][0], false);
+                        } else {
+                            $datetime = Converter::fromLdapDateTime($entryData[$attrValue][0], false);
+                        }
                         $entity->$setter($datetime);
                     } elseif ($instanceMetadataCollection->isArrayField($attrName)) {
                         unset($entryData[$attrValue]["count"]);
