@@ -881,6 +881,7 @@ class LdapEntityManager
             $entity->$setter($matches[1]);
         }
         if($dn != '') {
+            $entity->setDn($dn);
             foreach($instanceMetadataCollection->getParentLink() as $attrName => $parentClass) {
                 $setter = 'set' . ucfirst($attrName);
                 $parentDn = preg_replace('/^[a-zA-Z0-9]*=[a-zA-Z0-9]*,/', '', $dn);
@@ -891,7 +892,7 @@ class LdapEntityManager
             }
         }
 
-            return $entity;
+        return $entity;
     }
 
     private function generateSequenceValue($dn)

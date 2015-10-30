@@ -9,13 +9,7 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Must;
 
 
 class LdapEntity implements \JsonSerializable {
-    
-    
-    const EDS = 'directory';
-    const SOMAD = 'somad';
-    const MCAD = 'medcenterad';
-    const CAMPUSAD = 'campusad';
-    
+
     public function __construct() {
         $this->setObjectClass(lcfirst((new \ReflectionClass(get_class($this)))->getShortName()));
     }
@@ -59,8 +53,12 @@ class LdapEntity implements \JsonSerializable {
      * @Attribute("cn")
      * @Must()
      */
-    protected $cn;    
-    
+    protected $cn;
+
+    /**
+     * @Attribute("dn")
+     */
+    protected $dn;
     
     public function getObjectClass() {
         return $this->objectClass;
@@ -77,5 +75,16 @@ class LdapEntity implements \JsonSerializable {
     function setCn($cn) {
         $this->cn = $cn;
     }
-    
+
+    public function getDn()
+    {
+        return $this->dn;
+    }
+
+    public function setDn($dn)
+    {
+        $this->dn = $dn;
+    }
+
+
 }
