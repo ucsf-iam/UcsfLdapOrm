@@ -2,16 +2,22 @@
 
 namespace Ucsf\LdapOrmBundle\Entity\Ldap;
 
+use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\ORM\Mapping as ORM;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Must;
 
-
 class LdapEntity implements \JsonSerializable {
+
 
     public function __construct() {
         $this->setObjectClass(lcfirst((new \ReflectionClass(get_class($this)))->getShortName()));
+    }
+
+    public function getClassAnnotations() {
+        $reader = new AnnotationReader();
+        return $reader->getClassAnnotations(self::class);
     }
     
     /**
