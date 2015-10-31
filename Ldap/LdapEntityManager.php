@@ -642,7 +642,8 @@ class LdapEntityManager
         }
 
         if (empty($searchDn)) {
-            throw new MissingSearchDn('Could not discern search DN while searching for '.$entityName);
+            // throw new MissingSearchDn('Could not discern search DN while searching for '.$entityName);
+            $searchDn = '';
         }
         
         // Discern LDAP filter
