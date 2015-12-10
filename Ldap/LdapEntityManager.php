@@ -635,10 +635,10 @@ class LdapEntityManager
         $subentryNodes = empty($options['subentryNodes']) ? array() : $options['subentryNodes'];
 
         // Discern search DN
-        if (empty($options['searchDn'])) {
-            $searchDn = $this->renderString($instanceMetadataCollection->getSearchDn(), array('entity' => $subentryNodes));
-        } else {
+        if (isset($options['searchDn'])) {
             $searchDn = $options['searchDn'];
+        } else {
+            $searchDn = $this->renderString($instanceMetadataCollection->getSearchDn(), array('entity' => $subentryNodes));
         }
 
         if (empty($searchDn)) {

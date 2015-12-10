@@ -3,6 +3,7 @@
 namespace Ucsf\LdapOrmBundle\Entity\Ldap;
 
 use Doctrine\ORM\Mapping as ORM;
+use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
 use IAM\DirectoryServicesBundle\Util\Phone;
@@ -104,6 +105,7 @@ class OrganizationalPerson extends Person
     
     /**
      * @Attribute("title")
+     * @ArrayField()
      */
     protected $title;
     
