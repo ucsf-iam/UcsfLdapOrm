@@ -17,7 +17,7 @@ class LdapEntity implements \JsonSerializable {
 
     public function getClassAnnotations() {
         $reader = new AnnotationReader();
-        return $reader->getClassAnnotations(self::class);
+        return $reader->getClassAnnotations(new \ReflectionClass(self::class));
     }
     
     /**

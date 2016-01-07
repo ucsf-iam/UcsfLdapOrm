@@ -572,6 +572,7 @@ class LdapEntityManager
         }
 
         if (!empty($toModify)) {
+            unset($toModify['dn']);
             $this->logger->info("Modify $dn in LDAP : " . json_encode($toModify));
             ldap_modify($this->ldapResource, $dn, $toModify);
         }
