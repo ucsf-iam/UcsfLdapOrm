@@ -113,7 +113,7 @@ class Person extends LdapEntity implements UserInterface, EquatableInterface
     protected $salt;
     protected $roles;
 
-    public function __construct($username = null, $roles = null) 
+    public function __construct($username = null, $roles = null)
     {
         parent::__construct();
         $this->roles = empty($roles) ? array() : $roles;
@@ -124,18 +124,28 @@ class Person extends LdapEntity implements UserInterface, EquatableInterface
         return $this->roles;
     }
 
-    public function hasRoles($role) {
+    public function hasRole($role) {
         return in_array($role, $this->roles);
     }
 
+    /**
+     * Add an array of roles to the user's current set of roles.
+     * @param $roles
+     */
     public function setRoles($roles) {
         foreach ($roles as $role) {
             $this->addRole($role);
         }
     }
 
+    /**
+     * Add one role to the user's current set of roles.
+     * @param $role
+     */
     public function addRole($role) {
-        $this->roles[] = $role;
+        if (!$this->hasRole($role)) {
+            $this->roles[] = $role;
+        }
     }
 
     public function getPassword()
