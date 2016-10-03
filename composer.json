@@ -3,7 +3,7 @@
     "type": "symfony-bundle",
     "description": "Another LDAP ORM for Symfony2",
     "keywords": ["ucsf", "orm", "ldap"],
-    "license": "GPL",
+    "license": "MIT",
     "authors": [
         {
             "name": "UCSF IT Identity & Access Management",
