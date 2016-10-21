@@ -81,12 +81,12 @@ class LdapEntityManager
     {
         $this->logger     	= $logger;
         $this->twig       	= new TwigString();
-        $this->uri        	= $config['connection']['uri'];
-        $this->bindDN     	= $config['connection']['bind_dn'];
-        $this->password   	= $config['connection']['password'];
-        $this->passwordType = $config['connection']['password_type'];
-        $this->useTLS     	= $config['connection']['use_tls'];
-        $this->isActiveDirectory = !empty($config['connection']['active_directory']);
+        $this->uri        	= $config['uri'];
+        $this->bindDN     	= $config['bind_dn'];
+        $this->password   	= $config['password'];
+        $this->passwordType = $config['password_type'];
+        $this->useTLS     	= $config['use_tls'];
+        $this->isActiveDirectory = !empty($config['active_directory']);
         $this->reader     	= $reader;
     }
 
