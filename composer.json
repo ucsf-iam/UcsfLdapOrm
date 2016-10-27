@@ -1,8 +1,8 @@
 {
     "name": "ucsf/ldaporm-bundle",
     "type": "symfony-bundle",
-    "description": "Another LDAP ORM for Symfony2",
-    "keywords": ["ucsf", "orm", "ldap"],
+    "description": "LDAP ORM for Symfony2",
+    "keywords": ["ucsf", "orm", "ldap", "symfony"],
     "license": "MIT",
     "authors": [
         {
@@ -23,8 +23,5 @@
     "autoload": {
         "psr-0": { "Ucsf\\LdapOrmBundle": "" }
     },
-    "minimum-stability": "dev",
-    "target-dir": "Ucsf/LdapOrmBundle",
-    "extra": {
-    }
+    "target-dir": "Ucsf/LdapOrmBundle"
 }
