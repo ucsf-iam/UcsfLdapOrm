@@ -39,6 +39,7 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Sequence;
 use Ucsf\LdapOrmBundle\Components\GenericIterator;
 use Ucsf\LdapOrmBundle\Components\TwigString;
 use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
+use Ucsf\LdapOrmBundle\Entity\LdapOrm\DomainUser;
 use Ucsf\LdapOrmBundle\Ldap\Converter;
 use Ucsf\LdapOrmBundle\Ldap\Filter\LdapFilter;
 use Ucsf\LdapOrmBundle\Mapping\ClassMetaDataCollection;
@@ -62,6 +63,7 @@ class LdapEntityManager
     private $passwordType 	= "";
     private $useTLS     	= FALSE;
     private $isActiveDirectory = FALSE;
+    private $domains = [];
 
     private $ldapResource;
     private $pageCookie 	= "";
@@ -86,6 +88,7 @@ class LdapEntityManager
         $this->password   	= $config['password'];
         $this->passwordType = $config['password_type'];
         $this->useTLS     	= $config['use_tls'];
+        $this->domains     	= $config['domains'];
         $this->isActiveDirectory = !empty($config['active_directory']);
         $this->reader     	= $reader;
     }
@@ -822,6 +825,13 @@ class LdapEntityManager
 
     public function entryToEntity($entityName, $entryData)
     {
+        
+        if ($this->isActiveDirectory) {
+            $domain = DomainUser::getDomainFromDn($entryData['dn']);
+            if (isset($this->domains[$domain]['class'])) {
+                $entityName = $this->domains[$domain]['class'];
+            }
+        }
 
         $instanceMetadataCollection = $this->getClassMetadata($entityName);
 
