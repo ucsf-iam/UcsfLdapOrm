@@ -111,7 +111,7 @@ class LdapEntityManager
             if (!$tlsStatus) {
                 throw new Exception('Unable to enable TLS for LDAP connection.');
             }
-            $this->logger->info('TLS enabled for LDAP connection.');
+            $this->logger->debug('TLS enabled for LDAP connection.');
         }
 
         $r = ldap_bind($this->ldapResource, $this->bindDN, $this->password);
@@ -133,47 +133,13 @@ class LdapEntityManager
         $this->checkMust($entity);
         $entityClass = get_class($entity);
         $meta = $this->getClassMetadata($entityClass);
-        $entityArray = array();
 
-
-        $entityMethods = get_class_methods($entityClass);
-        foreach ($entityMethods as $methodName) {
-            // We just need getters
-            if (strpos($methodName, 'get') === 0) {
-                // We just need basic, parameterless getters, also the twig->render() isn't
-                // supplying a parameter to the getter, so render() will break if we let a
-                // getter that takes a parameter slip through.
-                if ((new \ReflectionMethod($entityClass,$methodName))->getNumberOfParameters() < 1) {
-                    $variable = lcfirst(substr($methodName, 3));
-                    $entityArray[$variable] = $entity->$methodName();
-                }
-            }
-        }
-
-        $dnSkel = $meta->getDn();
-        $dn = $this->twig->render($dnSkel, array('entity' => $entityArray));
-
-        $searchDnSkel = $meta->getSearchDn();
-        $searchDn = $this->twig->render($searchDnSkel, array('entity' => $entityArray));
-
-        $rdnString = preg_replace('/(,*)'.$searchDn.'/', '', $dn);
-        $filter = array();
-        foreach (explode(',', $rdnString) as $rdn) {
-            $pair = explode('=', $rdn);
-            if (!empty($pair[0])) {
-                $filter[$pair[0]] = $pair[1];
-            }
-        }
-        if (empty($filter)) {
-            $filter = '(objectClass=*)';
-        } else {
-            $filter = array('&' => $filter);
-        }
-
-        $entities = $this->retrieve($entityClass, array(
+        $searchDn = $meta->getSearchDn();
+        $dn = $entity->getDn();
+        $entities = $this->retrieve($entityClass, [
             'searchDn' => $searchDn,
-            'filter' => $filter,
-        ));
+            'filter' => ['distinguishedName' => $dn ]
+        ]);
 
         if ($checkOnly) {
             return (count($entities) > 0);
@@ -377,6 +343,7 @@ class LdapEntityManager
         return $entityDn;
     }
 
+
     /**
      * Persist an instance in Ldap
      * @param unknown_type $entity
@@ -389,7 +356,7 @@ class LdapEntityManager
         $entry= $this->entityToEntry($entity);
         $this->logger->info('to array : ' . serialize($entry));
 
-        $dn = $this->buildEntityDn($entity);
+        $dn = $entity->getDn();
 
         // test if entity already exist
 
@@ -411,7 +378,7 @@ class LdapEntityManager
     public function delete($instance)
     {  
         $dn = $this->buildEntityDn($instance);
-        $this->logger->info('Delete in LDAP: ' . $dn );
+        $this->logger->debug('Delete in LDAP: ' . $dn );
 	$this->deleteByDn($dn, true);
         return;
     }
@@ -425,7 +392,7 @@ class LdapEntityManager
         // Connect if needed
         $this->connect();
 
-        $this->logger->info('Delete (recursive=' . $recursive . ') in LDAP: ' . $dn );
+        $this->logger->debug('Delete (recursive=' . $recursive . ') in LDAP: ' . $dn );
 
         if($recursive == false) {
             return(ldap_delete($this->ldapResource, $dn));
@@ -508,7 +475,7 @@ class LdapEntityManager
         
         list($toInsert,) = $this->splitArrayForUpdate($arrayInstance);
 
-        $this->logger->info("Insert $dn in LDAP : " . json_encode($toInsert));
+        $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
         ldap_add($this->ldapResource, $dn, $toInsert);
     }
 
@@ -573,7 +540,8 @@ class LdapEntityManager
 
         if (!empty($toModify)) {
             unset($toModify['dn']);
-            $this->logger->info("Modify $dn in LDAP : " . json_encode($toModify));
+            $this->logger->debug("Modify $dn in LDAP : " . json_encode($toModify));
+            $toModify = ['telephoneNumber' => $toModify['telephoneNumber']];
             ldap_modify($this->ldapResource, $dn, $toModify);
         }
 
@@ -581,7 +549,7 @@ class LdapEntityManager
 
 
         if (!empty($toDelete)) {
-            $this->logger->info("Suppress from $dn these attributs in LDAP : " . json_encode($toDelete));
+            $this->logger->debug("Suppress from $dn these attributs in LDAP : " . json_encode($toDelete));
             try {
                 ldap_mod_del($this->ldapResource, $dn, $toDelete);
             }
@@ -742,7 +710,7 @@ class LdapEntityManager
         $instanceMetadataCollection = $this->getClassMetadata($entityName);
 
         $data = array();
-        $this->logger->info('Search in LDAP: ' . $dn . ' query (ObjectClass=*)');
+        $this->logger->debug('Search in LDAP: ' . $dn . ' query (ObjectClass=*)');
         try {
             $sr = ldap_search($this->ldapResource,
                 $dn,
@@ -792,7 +760,7 @@ class LdapEntityManager
     {
         // Connect if needed
         $this->connect();
-        $this->logger->info(sprintf("request on ldap root:%s with filter:%s", $searchDN, $rawFilter));
+        $this->logger->debug(sprintf("request on ldap root:%s with filter:%s", $searchDN, $rawFilter));
         return ldap_search($this->ldapResource,
             $searchDN,
             $rawFilter,
@@ -873,7 +841,7 @@ class LdapEntityManager
                         $entity->$setter($entryData[$attrValue][0]);
                     }
                 } catch (Exception $e) {
-                    $this->logger->err(sprintf("Exception in ldap to entity mapping : %s", $e->getMessage()));
+                    $this->logger->error(sprintf("Exception in ldap to entity mapping : %s", $e->getMessage()));
                 }
            }
         }
