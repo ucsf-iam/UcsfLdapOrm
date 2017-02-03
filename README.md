@@ -50,7 +50,7 @@ some_ldap_server:
 services:
     myldap_entity_manager:
         class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
-        arguments: ["@logger", "@annotation_reader", "%some_ldap_server%"]
+        arguments: ["@logger", "@twig", ""@annotation_reader", "%some_ldap_server%"]
     comexample_person_service:
         class: MyBundle\ComExamplePersonService
         arguments: [ @myldap_entity_manager ]

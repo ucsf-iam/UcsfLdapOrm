@@ -38,7 +38,6 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Operational;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Sequence;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
 use Ucsf\LdapOrmBundle\Components\GenericIterator;
-use Ucsf\LdapOrmBundle\Components\TwigString;
 use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
 use Ucsf\LdapOrmBundle\Entity\Ldap\LdapEntity;
 use Ucsf\LdapOrmBundle\Ldap\Converter;
@@ -76,23 +75,23 @@ class LdapEntityManager
     private $iterator = Null;
 
     /**
-     * Build the Entity Manager service
-     *
-     * @param Twig_Environment $twig
-     * @param Reader           $reader
-     * @param array            $config
+     * LdapEntityManager constructor.
+     * @param Logger $logger
+     * @param \Twig_Environment $twig
+     * @param Reader $reader
+     * @param $config
      */
     public function __construct(Logger $logger, Reader $reader, $config)
     {
-        $this->logger     	= $logger;
-        $this->twig       	= new TwigString();
-        $this->uri        	= $config['uri'];
-        $this->bindDN     	= $config['bind_dn'];
-        $this->password   	= $config['password'];
-        $this->passwordType = $config['password_type'];
-        $this->useTLS     	= $config['use_tls'];
-        $this->isActiveDirectory = !empty($config['active_directory']);
-        $this->reader     	= $reader;
+        $this->logger     	        = $logger;
+        $this->twig                 = new \Twig_Environment(new \Twig_Loader_Array());
+        $this->uri        	        = $config['uri'];
+        $this->bindDN     	        = $config['bind_dn'];
+        $this->password   	        = $config['password'];
+        $this->passwordType         = $config['password_type'];
+        $this->useTLS     	        = $config['use_tls'];
+        $this->isActiveDirectory    = !empty($config['active_directory']);
+        $this->reader     	        = $reader;
     }
 
     /**
@@ -256,49 +255,43 @@ class LdapEntityManager
     /**
      * Convert an entity to array using annotation reader
      * 
-     * @param LdapEntity $instance
+     * @param LdapEntity $entity
      * 
      * @return array
      */
-    public function entityToEntry(LdapEntity $instance)
+    public function entityToEntry(LdapEntity $entity)
     {
-        $instanceClassName = get_class($instance);
-        $arrayInstance=array();
+        $entityClass = get_class($entity);
+        $entry=array();
 
-        $r = new ReflectionClass($instanceClassName);
-        $instanceMetadataCollection = $this->getClassMetadata($instance);
-        $classAnnotations = $this->reader->getClassAnnotations($r);
+        $r = new ReflectionClass($entityClass);
+        $metadata = $this->getClassMetadata($entity);
+        $annotations = $this->reader->getClassAnnotations($r);
 
-        $arrayInstance['objectClass'] = array('top');
+        $entry['objectClass'] = array('top');
 
-        foreach ($classAnnotations as $classAnnotation) {
-            if ($classAnnotation instanceof ObjectClass && ($classAnnotationValue = $classAnnotation->getValue()) !== '' ) {
-                array_push($arrayInstance['objectClass'], $classAnnotationValue);
+        foreach ($annotations as $annotation) {
+            if ($annotation instanceof ObjectClass && ($value = $annotation->getValue()) !== '' ) {
+                array_push($entry['objectClass'], $value);
             }
         }
 
-        foreach($instanceMetadataCollection->getMetadatas() as $varname) {
-            $getter = 'get' . ucfirst($instanceMetadataCollection->getKey($varname));
-            $setter = 'set' . ucfirst($instanceMetadataCollection->getKey($varname));
+        foreach($metadata->getMetadatas() as $attribute) {
+            $getter = 'get' . ucfirst($metadata->getKey($attribute));
+            $setter = 'set' . ucfirst($metadata->getKey($attribute));
 
-            $value  = $instance->$getter();
+            $value  = $entity->$getter();
             if($value == null) {
-                if($instanceMetadataCollection->isSequence($instanceMetadataCollection->getKey($varname))) {
+                if($metadata->isSequence($metadata->getKey($attribute))) {
 
-                    $sequence = $this->renderString($instanceMetadataCollection->getSequence($instanceMetadataCollection->getKey($varname)), array(
-                        'entity' => $instance,
-                        /*
-                         * In the original source code for the bundle upon which UcsfLdapOrm is based, it was
-                         * assumed that you'd only be looking for records under a single base DN. Therefore,
-                         * configuration for the DN was put into configuration files. This bundle permits you to
-                         * search any number of base DNsw
-                         *
-                        'baseDN' => $this->baseDN,
-                         */
-                    ));
+
+                    $sequence = $this->twigRender(
+                        $metadata->getSequence($metadata->getKey($attribute)),
+                        [ 'entity' => $entity ]
+                    );
 
                     $value = (int) $this->generateSequenceValue($sequence);
-                    $instance->$setter($value);
+                    $entity->$setter($value);
                 }
             }
             // Specificity of ldap (incopatibility with ldap boolean)
@@ -312,43 +305,39 @@ class LdapEntityManager
 
             if(is_object($value)) {
                 if ($value instanceof DateTime) {
-                    $arrayInstance[$varname] = Converter::toLdapDateTime($value, false);
+                    $entry[$attribute] = Converter::toLdapDateTime($value, false);
                 }
                 elseif ($value instanceof DateTimeDecorator) {
-                    $arrayInstance[$varname] = (string)$value;
+                    $entry[$attribute] = (string)$value;
                 }
                 else {
-                    $arrayInstance[$varname] = $this->buildEntityDn($value);
+                    $entry[$attribute] = $this->buildEntityDn($value);
                 }
             } elseif(is_array($value) && !empty($value) && isset($value[0]) && is_object($value[0])) {
                     $valueArray = array();
                     foreach($value as $val) {
                         $valueArray[] = $this->buildEntityDn($val);
                     }
-                    $arrayInstance[$varname] = $valueArray;
-            } elseif(strtolower($varname) == "userpassword") {
+                    $entry[$attribute] = $valueArray;
+            } elseif(strtolower($attribute) == "userpassword") {
                 if (is_array($value)) {
                     foreach ($value as $val) {
                         $needle = '{CLEAR}';
                         if (strpos($val, $needle) === 0) {
-                            $arrayInstance[$varname] =  substr($val, strlen($needle));
+                            $entry[$attribute] =  substr($val, strlen($needle));
                         }
                     }
                 } else {
-                    $arrayInstance[$varname] = $value;
+                    $entry[$attribute] = $value;
                 }
             }  else {
-                $arrayInstance[$varname] = $value;
+                $entry[$attribute] = $value;
             }
         }
 
-        return $arrayInstance;
+        return $entry;
     }
 
-    public function renderString($string, $vars)
-    {
-        return $this->twig->render($string, $vars);
-    }
 
     /**
      * Build a DN for an entity with the use of dn annotation
@@ -374,7 +363,7 @@ class LdapEntityManager
             }
         }
 
-        $entityDn =  $this->renderString($dnModel, array('entity' => $instance));
+        $entityDn =  $this->twigRender($dnModel, ['entity' => $instance]);
 
         return $entityDn;
     }
@@ -687,7 +676,7 @@ class LdapEntityManager
         if (isset($options['searchDn'])) {
             $searchDn = $options['searchDn'];
         } else {
-            $searchDn = $this->renderString($instanceMetadataCollection->getSearchDn(), array('entity' => $subentryNodes));
+            $searchDn = $this->twigRender($instanceMetadataCollection->getSearchDn(), ['entity' => $subentryNodes]);
         }
 
         if (empty($searchDn)) {
@@ -976,6 +965,17 @@ class LdapEntityManager
 
     private function isSha1($str) {
         return (bool) preg_match('/^[0-9a-f]{40}$/i', $str);
+    }
+
+    private function twigRender($templateString = null, $variables = null) {
+        if (!$templateString) {
+            return FALSE;
+        }
+        if (!$variables) {
+            return $templateString;
+        }
+        $template = $this->twig->createTemplate($templateString);
+        return $template->render($variables);
     }
 }
 
