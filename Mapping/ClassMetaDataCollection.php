@@ -33,6 +33,7 @@ class ClassMetaDataCollection
     public $parentLink;
     public $objectClass;
     public $searchDn;
+    public $uniqueIdentifier;
     public $dn;
     public $arrayField;
     public $must;
@@ -211,6 +212,24 @@ class ClassMetaDataCollection
     {
         $this->operational = $operational;
     }
+
+    /**
+     * @return mixed
+     */
+    public function getUniqueIdentifier()
+    {
+        return $this->uniqueIdentifier;
+    }
+
+    /**
+     * @param mixed $uniqueIdentifier
+     */
+    public function setUniqueIdentifier($uniqueIdentifier)
+    {
+        $this->uniqueIdentifier = $uniqueIdentifier;
+    }
+
+
 
 
 }

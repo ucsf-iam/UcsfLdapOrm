@@ -7,7 +7,9 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Must;
 use IAM\DirectoryServicesBundle\Util\Phone;
+use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
 use Ucsf\LdapOrmBundle\Entity\Ldap\OrganizationalPerson;
+use Ucsf\LdapOrmBundle\Annotation\Ldap\Operational;
 
 
 /**
@@ -15,47 +17,11 @@ use Ucsf\LdapOrmBundle\Entity\Ldap\OrganizationalPerson;
  * @author jgabler
  *
  * @ObjectClass("user")
+ * @UniqueIdentifier("distinguishedName")
  */
 class User extends OrganizationalPerson {
 
     const SAMACCOUNTNAME_REGEX = '/^[^"\/\\\[\]:;\|=,\+\*\?<>\@]{1,20}$/';
-
-    /**
-     * @return mixed
-     */
-    public function getDomain() {
-        if (!isset($this->domain)) {
-            $this->setDomain();
-        }
-        return $this->domain;
-    }
-
-
-    /**
-     * @param null $domain
-     */
-    protected function setDomain($domain = null) {
-        if ($domain) {
-            $this->domain = $domain;
-        } else {
-            if (!isset($this->domain) && isset($this->dn)) {
-                $this->domain = $this->getDomainFromDn($this->dn);
-            }
-        }
-    }
-
-
-    /**
-     * Convert an AD entity's DN into an AD domain name
-     * @param $dn
-     * @return string
-     */
-    public static function getDomainFromDn($dn) {
-        $dc = preg_split('/,dc=/i', $dn);
-        array_shift($dc);
-        return strtolower(implode('.', $dc));
-    }
-
 
 
     /**
@@ -262,6 +228,7 @@ class User extends OrganizationalPerson {
 
     /**
      * @Attribute("pwdLastSet")
+     * @Operational()
      */
     public $pwdLastSet;
 
@@ -312,11 +279,13 @@ class User extends OrganizationalPerson {
 
     /**
      * @Attribute("whenChanged")
+     * @Operational()
      */
     public $whenChanged;
 
     /**
      * @Attribute("whenCreated")
+     * @Operational()
      */
     public $whenCreated;
 

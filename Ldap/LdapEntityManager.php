@@ -36,9 +36,11 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Repository as RepositoryAttribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\SearchDn;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Operational;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Sequence;
+use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
 use Ucsf\LdapOrmBundle\Components\GenericIterator;
 use Ucsf\LdapOrmBundle\Components\TwigString;
 use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
+use Ucsf\LdapOrmBundle\Entity\Ldap\LdapEntity;
 use Ucsf\LdapOrmBundle\Ldap\Converter;
 use Ucsf\LdapOrmBundle\Ldap\Filter\LdapFilter;
 use Ucsf\LdapOrmBundle\Mapping\ClassMetaDataCollection;
@@ -55,6 +57,9 @@ use Symfony\Bridge\Monolog\Logger;
 class LdapEntityManager
 {
     const DEFAULT_MAX_RESULT_COUNT      = 100;
+    const OPERAND_ADD = 'add';
+    const OPERAND_MOD = 'mod';
+    const OPERAND_DEL = 'del';
 
     private $uri        	= "";
     private $bindDN     	= "";
@@ -67,7 +72,7 @@ class LdapEntityManager
     private $pageCookie 	= "";
     private $pageMore    	= FALSE;
     private $reader;
-    
+
     private $iterator = Null;
 
     /**
@@ -135,10 +140,14 @@ class LdapEntityManager
         $meta = $this->getClassMetadata($entityClass);
 
         $searchDn = $meta->getSearchDn();
-        $dn = $entity->getDn();
+        if (!$searchDn && $this->isActiveDirectory) {
+            $searchDn = LdapEntity::getBaseDnFromDn($entity->getDn());
+        }
+        $uniqueIdentifier = $this->getUniqueIdentifier($entity);
+
         $entities = $this->retrieve($entityClass, [
             'searchDn' => $searchDn,
-            'filter' => ['distinguishedName' => $dn ]
+            'filter' => [ $uniqueIdentifier['attribute'] => $uniqueIdentifier['value'] ]
         ]);
 
         if ($checkOnly) {
@@ -146,6 +155,30 @@ class LdapEntityManager
         } else {
             return $entities;
         }
+    }
+
+    public function getUniqueIdentifier(LdapEntity $entity, $throwExceptions = TRUE) {
+        $entityClass = get_class($entity);
+        $meta = $this->getClassMetadata($entityClass);
+        $uniqueIdentifierAttr = $meta->getUniqueIdentifier();
+
+        if ($uniqueIdentifierAttr) {
+            $uniqueIdentifierGetter = 'get' . ucfirst($uniqueIdentifierAttr);
+            $uniqueIdentifierValue = $entity->$uniqueIdentifierGetter();
+        } else {
+            if ($throwExceptions) {
+                throw new \Exception($entityClass.' does not use the @UniqueIdentifier annotation.');
+            }
+        }
+
+        if (empty($uniqueIdentifierValue) && $throwExceptions) {
+            throw new \Exception($entityClass.' uses the @UniqueIdentifier annotation, but not value is provided.');
+        }
+
+        return [
+            'attribute' => $uniqueIdentifierAttr,
+            'value' => $uniqueIdentifierValue
+        ];
     }
 
     /**
@@ -174,6 +207,9 @@ class LdapEntityManager
             }
             if ($classAnnotation instanceof Dn) {
                 $instanceMetadataCollection->setDn($classAnnotation->getValue());
+            }
+            if ($classAnnotation instanceof UniqueIdentifier) {
+                $instanceMetadataCollection->setUniqueIdentifier($classAnnotation->getValue());
             }
         }
 
@@ -220,11 +256,11 @@ class LdapEntityManager
     /**
      * Convert an entity to array using annotation reader
      * 
-     * @param unknown_type $instance
+     * @param LdapEntity $instance
      * 
      * @return array
      */
-    private function entityToEntry($instance)
+    public function entityToEntry(LdapEntity $instance)
     {
         $instanceClassName = get_class($instance);
         $arrayInstance=array();
@@ -348,26 +384,26 @@ class LdapEntityManager
      * Persist an instance in Ldap
      * @param unknown_type $entity
      */
-    public function persist($entity, $checkMust = true)
+    public function persist($entity, $checkMust = true, $originalEntity = null)
     {
         if ($checkMust) {
             $this->checkMust($entity);
         }
-        $entry= $this->entityToEntry($entity);
-        $this->logger->info('to array : ' . serialize($entry));
 
         $dn = $entity->getDn();
 
         // test if entity already exist
 
-        $currentEntity = $this->entityExists($entity, false);
-        if(count($currentEntity) > 0)
+        if (!$originalEntity) {
+            $result = $this->entityExists($entity, false);
+            $originalEntity = reset($result);
+        }
+        if(count($originalEntity) > 0)
         {
-            unset($entry['objectClass']);
-            $this->ldapUpdate($dn, $entry, $currentEntity[0]);
+            $this->ldapUpdate($dn, $entity, $originalEntity);
             return;
         }
-        $this->ldapPersist($dn, $entry);
+        $this->ldapPersist($dn, $this->entityToEntry($entity));
         return;
     }
 
@@ -448,7 +484,6 @@ class LdapEntityManager
      * @return TRUE or the name of the offending attribute
      */
     public function checkMust($instance) {
-        $emptyAttribute = null;
         $classMetaData = $this->getClassMetaData(get_class($instance));
         
         foreach ($classMetaData->getMust() as $mustAttributeName => $existence) {
@@ -466,18 +501,74 @@ class LdapEntityManager
      * Persist an array using ldap function
      * 
      * @param unknown_type $dn
-     * @param array        $arrayInstance
+     * @param array        $entry
      */
-    private function ldapPersist($dn, Array $arrayInstance)
+    private function ldapPersist($dn, Array $entry)
     {
         // Connect if needed
         $this->connect();
         
-        list($toInsert,) = $this->splitArrayForUpdate($arrayInstance);
+        list($toInsert,) = $this->splitArrayForUpdate($entry);
+        $operands = $this->getEntityOperands($entry);
 
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
         ldap_add($this->ldapResource, $dn, $toInsert);
     }
+
+    /**
+     * Look at an entry's attributes and determine, relative to it's state before being modified,
+     * the operation for each attribute.
+     */
+    private function getEntityOperands(LdapEntity $original, LdapEntity $modified, $notRetrievedAttributes = [], $operationalAttributes = []) {
+        $operands = [ self::OPERAND_MOD => [], self::OPERAND_DEL => [], self::OPERAND_ADD => [] ];
+        $modifiedEntry = $this->entityToEntry($modified);
+        $originalEntry = $this->entityToEntry($original);
+
+        // Do not attempt to modify operational attributes
+        foreach($operationalAttributes as $operationalAttributeName => $status) {
+            if ($status) {
+                unset($modifiedEntry[$operationalAttributeName]);
+            }
+        }
+
+        // Do not attempt to modify restricted attributes
+        unset($modifiedEntry['objectClass']);
+        unset($modifiedEntry['uid']);
+        unset($modifiedEntry['employeeId']);
+        unset($modifiedEntry['ucsfEduIDNumber']);
+        unset($modifiedEntry['dn']);
+        unset($modifiedEntry['cn']);
+        unset($modifiedEntry['distinguishedName']);
+        unset($modifiedEntry['name']);
+        unset($modifiedEntry['instanceType']);
+        unset($modifiedEntry['sAMAccountType']);
+
+        // Inspect the state of each attribute and determinal if this is to be persisted as an attribute
+        // modification, deletion or addition.
+        foreach($modifiedEntry as $attribute => $value) {
+            // Don't include attributes that haven't actually changed
+            if ($value == $originalEntry[$attribute]) {
+                continue;
+            }
+            // If the modified value is empty, first make sure it was an attribute that was originall
+            // retrieved. If so, set the delete operations to use the original value.
+            if (is_null($value) || empty($value)) {
+                if (!in_array($attribute, $notRetrievedAttributes)) {
+                    $operands[self::OPERAND_DEL][$attribute] = $originalEntry[$attribute];
+                }
+            // If modified is not the same value as the original, and it's not empty, if must be a real modify
+            } else {
+                if (is_array($value)) {
+                    $value = $this->getEntityOperands($value)[self::OPERAND_MOD];
+                } elseif($value instanceof \Datetime) { // It shouldn't happen, but tests did reveal such cases
+                    $value = new DateTimeDecorator($value);
+                }
+                $operands[self::OPERAND_MOD][$attribute] = $value;
+            }
+        }
+        return $operands;
+    }
+
 
     /**
      * Splits modified and removed attributes and make sure they are compatible with ldap_modify & insert
@@ -508,53 +599,40 @@ class LdapEntityManager
                 list($val,) = $this->splitArrayForUpdate($val); // Multi-dimensional arrays are also fixed
             }
             elseif(is_string($val)) {
-                #$val = utf8_encode($val);
+                // $val = utf8_encode($val);
             }
             elseif($val instanceof \Datetime) { // It shouldn't happen, but tests did reveal such cases
                 $val = new DateTimeDecorator($val);
             }
         }
-        return array(array_merge($toModify), array_merge($toDelete)); // array_merge is to re-index gaps in keys
+
+        return array(array_values($toModify), array_values($toDelete)); // array_merge is to re-index gaps in keys
     }
     
     /**
      * Update an object in ldap with array
      *
-     * @param unknown_type $dn
-     * @param array        $entry
+     * @param $dn
+     * @param LdapEntity $modified
+     * @param LdapEntity $original
+     * @throws Exception
      */
-    private function ldapUpdate($dn, Array $entry, $entity)
+    private function ldapUpdate($dn, LdapEntity $modified, LdapEntity $original)
     {
-        // Connect if needed
         $this->connect();
 
-        list($toModify, $toDelete) = $this->splitArrayForUpdate($entry, $entity);
+        $notRetrievedAttributes = $modified->getNotRetrieveAttributes();
+        $operationalAttributes = $this->getClassMetadata($modified)->getOperational();
+        $operands = $this->getEntityOperands($original, $modified, $notRetrievedAttributes, $operationalAttributes);
 
-        // Do not attempt to modify operational attributes
-        foreach($this->getClassMetadata($entity)->getOperational() as $operationalAttributeName => $status) {
-            if ($status) {
-                unset($toModify[$operationalAttributeName]);
-                unset($toDelete[$operationalAttributeName]);
-            }
+        if (!empty($operands[self::OPERAND_MOD])) {
+            ldap_modify($this->ldapResource, $dn, $operands[self::OPERAND_MOD]);
+            $this->logger->debug('MODIFY: "'.$dn.'" "'.json_encode($operands[self::OPERAND_MOD]).'"');
         }
 
-        if (!empty($toModify)) {
-            unset($toModify['dn']);
-            $this->logger->debug("Modify $dn in LDAP : " . json_encode($toModify));
-            $toModify = ['telephoneNumber' => $toModify['telephoneNumber']];
-            ldap_modify($this->ldapResource, $dn, $toModify);
-        }
-
-
-
-
-        if (!empty($toDelete)) {
-            $this->logger->debug("Suppress from $dn these attributs in LDAP : " . json_encode($toDelete));
-            try {
-                ldap_mod_del($this->ldapResource, $dn, $toDelete);
-            }
-            catch(Exception $e) {
-            }
+        if (!empty($operands[self::OPERAND_DEL])) {
+            ldap_mod_del($this->ldapResource, $dn, $operands[self::OPERAND_DEL]);
+            $this->logger->debug('DELETE: "'.$dn.'" "'.json_encode($operands[self::OPERAND_DEL]).'"');
         }
     }
 
@@ -583,6 +661,8 @@ class LdapEntityManager
         $paging = !empty($options['pageSize']);
 
         $instanceMetadataCollection = $this->getClassMetadata($entityName);
+        $metaDatas = $instanceMetadataCollection->getMetadatas();
+        $mustAttributes = $instanceMetadataCollection->getMust();
 
         // Discern max result size
         $max = empty($options['max']) ? self::DEFAULT_MAX_RESULT_COUNT : $options['max'];
@@ -644,24 +724,28 @@ class LdapEntityManager
             }
         }
 
-        // Discern attributes to retrieve
-        if (empty($options['attributes'])) {
-            $attributes = array_values($instanceMetadataCollection->getMetadatas());
-        } else {
-            $attributes = $options['attributes'];
-        }
+        // Discern attributes to retrieve. If no attributes are supplied, get all the variables annotated
+        // as LDAP attributes within the entity class
+        $attributes = empty($options['attributes']) ? array_values($metaDatas) : $options['attributes'];
+        // Always get MUST attributes because they might be needed later when persisting
+        $attributes = array_values(array_unique(array_merge($attributes, array_keys(array_filter($mustAttributes)))));
+        $notRetrieveAttributes = array_diff(array_values($metaDatas), $attributes);
 
         // Search LDAP
         $searchResult = $this->doRawLdapSearch($filter, $attributes, $max, $searchDn);
 
+
         $entries = ldap_get_entries($this->ldapResource, $searchResult);
+        $this->logger->debug('SEARCH: "'.$entries['count'].'" "'.$searchDn.'" "'.$filter.'"');
         if (!empty($options['checkOnly']) && $options['checkOnly'] == true) {
             return ($entries['count'] > 0);
         }
         $entities = array();
         foreach ($entries as $entry) {
             if(is_array($entry)) {
-                    $entities[] = $this->entryToEntity($entityName, $entry);
+                $entity = $this->entryToEntity($entityName, $entry);
+                $entity->setNotRetrieveAttributes($notRetrieveAttributes);
+                $entities[] = $entity;
             }
         }
 
@@ -710,7 +794,7 @@ class LdapEntityManager
         $instanceMetadataCollection = $this->getClassMetadata($entityName);
 
         $data = array();
-        $this->logger->debug('Search in LDAP: ' . $dn . ' query (ObjectClass=*)');
+        $this->logger->debug('SEARCH-By-DN: ' . $dn . ' query (ObjectClass=*)');
         try {
             $sr = ldap_search($this->ldapResource,
                 $dn,
@@ -788,6 +872,11 @@ class LdapEntityManager
     }
 
 
+    /**
+     * @param $entityName
+     * @param $entryData
+     * @return LdapEntity
+     */
     public function entryToEntity($entityName, $entryData)
     {
 

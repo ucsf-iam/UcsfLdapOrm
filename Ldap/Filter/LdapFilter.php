@@ -189,7 +189,11 @@ class LdapFilter
             return $filterData;
         }
     }
-    
+
+    /**
+     * @param $val
+     * @return mixed
+     */
     public static function escapeLdapValue($val) {
         return str_replace(
                 array('=', ',', '(', ')'),
