@@ -21,9 +21,7 @@
  
 namespace Ucsf\LdapOrmBundle\Ldap;
 
-use DateTime;
 use Doctrine\Common\Annotations\Reader;
-use Exception;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Dn;
@@ -40,11 +38,9 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
 use Ucsf\LdapOrmBundle\Components\GenericIterator;
 use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
 use Ucsf\LdapOrmBundle\Entity\Ldap\LdapEntity;
-use Ucsf\LdapOrmBundle\Ldap\Converter;
 use Ucsf\LdapOrmBundle\Ldap\Filter\LdapFilter;
 use Ucsf\LdapOrmBundle\Mapping\ClassMetaDataCollection;
 use Ucsf\LdapOrmBundle\Repository\Repository;
-use ReflectionClass;
 use Symfony\Bridge\Monolog\Logger;
 
 /**
@@ -113,17 +109,34 @@ class LdapEntityManager
         if ($this->useTLS) {
             $tlsStatus = ldap_start_tls($this->ldapResource);
             if (!$tlsStatus) {
-                throw new Exception('Unable to enable TLS for LDAP connection.');
+                throw new \Exception('Unable to enable TLS for LDAP connection.');
             }
             $this->logger->debug('TLS enabled for LDAP connection.');
         }
 
-        $r = ldap_bind($this->ldapResource, $this->bindDN, $this->password);
-        if($r == null) {
-            throw new Exception('Cannot connect to LDAP server: ' . $this-uri . ' as ' . $this->bindDN . '/"' . $this->password . '".');
+        for ($try=1; $try<=3; $try++) {
+            $msg = '';
+            try {
+                $bindResult = ldap_bind($this->ldapResource, $this->bindDN, $this->password);
+            } catch (\Exception $e) {
+                $msg = $e->getMessage();
+            }
+            if(!empty($bindResult)) {
+                break;
+            } else {
+                $this->logger->warning('On try #'.$try.' cannot bind to LDAP server: ' . $this->uri . ' as ' . $this->bindDN. ' ' . $msg);
+                sleep(1);
+            }
         }
+
+        if (empty($bindResult)) {
+            throw new \Exception('Cannot bind to LDAP server: ' . $this->uri . ' as ' . $this->bindDN);
+        }
+
+
         $this->logger->debug('Connected to LDAP server: ' . $this->uri . ' as ' . $this->bindDN . ' .');
-        return $r;
+
+        return $bindResult;
     }
 
     /**
@@ -189,7 +202,7 @@ class LdapEntityManager
      */
     public function getClassMetadata($entityName)
     {
-        $r = new ReflectionClass($entityName);
+        $r = new \ReflectionClass($entityName);
         $instanceMetadataCollection = new ClassMetaDataCollection();
         $instanceMetadataCollection->name = $entityName;
         $classAnnotations = $this->reader->getClassAnnotations($r);
@@ -264,7 +277,7 @@ class LdapEntityManager
         $entityClass = get_class($entity);
         $entry=array();
 
-        $r = new ReflectionClass($entityClass);
+        $r = new \ReflectionClass($entityClass);
         $metadata = $this->getClassMetadata($entity);
         $annotations = $this->reader->getClassAnnotations($r);
 
@@ -351,7 +364,7 @@ class LdapEntityManager
         $instanceClassName = get_class($instance);
         $arrayInstance=array();
 
-        $r = new ReflectionClass($instanceClassName);
+        $r = new \ReflectionClass($instanceClassName);
         $instanceMetadataCollection = new ClassMetaDataCollection();
         $classAnnotations = $this->reader->getClassAnnotations($r);
 
@@ -620,8 +633,16 @@ class LdapEntityManager
         }
 
         if (!empty($operands[self::OPERAND_DEL])) {
-            ldap_mod_del($this->ldapResource, $dn, $operands[self::OPERAND_DEL]);
-            $this->logger->debug('DELETE: "'.$dn.'" "'.json_encode($operands[self::OPERAND_DEL]).'"');
+            try {
+                ldap_mod_del($this->ldapResource, $dn, $operands[self::OPERAND_DEL]);
+                $this->logger->debug('DELETE: "' . $dn . '" "' . json_encode($operands[self::OPERAND_DEL]) . '"');
+            } catch (\Exception $e) {
+                // ldap_mod_del() will fail if it tries to delete an attribute
+                // which is not present on the target entry. This is not an error.
+                // PHP will say: "Warning: ldap_mod_del(): Modify: No such attribute"
+                // This just effective ignores it.
+                $this->logger->debug('DELETE (not present): "' . $dn . '" "' . json_encode($operands[self::OPERAND_DEL]) . '"');
+            }
         }
     }
 
