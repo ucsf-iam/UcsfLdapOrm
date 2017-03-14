@@ -22,6 +22,7 @@
 namespace Ucsf\LdapOrmBundle\Ldap;
 
 use Doctrine\Common\Annotations\Reader;
+use Symfony\Component\Console\Output\ConsoleOutput;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Dn;
@@ -402,11 +403,9 @@ class LdapEntityManager
         }
         if(count($originalEntity) > 0)
         {
-            $this->ldapUpdate($dn, $entity, $originalEntity);
-            return;
+            return $this->ldapUpdate($dn, $entity, $originalEntity);
         }
-        $this->ldapPersist($dn, $this->entityToEntry($entity));
-        return;
+        return $this->ldapPersist($dn, $this->entityToEntry($entity));
     }
 
     /**
@@ -514,7 +513,7 @@ class LdapEntityManager
         $operands = $this->getEntityOperands($entry);
 
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
-        ldap_add($this->ldapResource, $dn, $toInsert);
+        return ldap_add($this->ldapResource, $dn, $toInsert);
     }
 
     /**
@@ -621,6 +620,7 @@ class LdapEntityManager
      */
     private function ldapUpdate($dn, LdapEntity $modified, LdapEntity $original)
     {
+        $updated = FALSE;
         $this->connect();
 
         $notRetrievedAttributes = $modified->getNotRetrieveAttributes();
@@ -628,13 +628,17 @@ class LdapEntityManager
         $operands = $this->getEntityOperands($original, $modified, $notRetrievedAttributes, $operationalAttributes);
 
         if (!empty($operands[self::OPERAND_MOD])) {
-            ldap_modify($this->ldapResource, $dn, $operands[self::OPERAND_MOD]);
+            if (ldap_modify($this->ldapResource, $dn, $operands[self::OPERAND_MOD])); {
+                $updated = TRUE;
+            }
             $this->logger->debug('MODIFY: "'.$dn.'" "'.json_encode($operands[self::OPERAND_MOD]).'"');
         }
 
         if (!empty($operands[self::OPERAND_DEL])) {
             try {
-                ldap_mod_del($this->ldapResource, $dn, $operands[self::OPERAND_DEL]);
+                if (ldap_mod_del($this->ldapResource, $dn, $operands[self::OPERAND_DEL])) {
+                    $updated = TRUE;
+                }
                 $this->logger->debug('DELETE: "' . $dn . '" "' . json_encode($operands[self::OPERAND_DEL]) . '"');
             } catch (\Exception $e) {
                 // ldap_mod_del() will fail if it tries to delete an attribute
@@ -644,6 +648,8 @@ class LdapEntityManager
                 $this->logger->debug('DELETE (not present): "' . $dn . '" "' . json_encode($operands[self::OPERAND_DEL]) . '"');
             }
         }
+
+        return $updated;
     }
 
     /**
@@ -852,6 +858,10 @@ class LdapEntityManager
 
     public function doRawLdapSearch($rawFilter, $attributes, $count, $searchDN)
     {
+        $output = new ConsoleOutput();
+//        $output->writeln('LEM: '.$searchDN);
+//        $output->writeln('LEM: '.$rawFilter);
+
         // Connect if needed
         $this->connect();
         $this->logger->debug(sprintf("request on ldap root:%s with filter:%s", $searchDN, $rawFilter));
