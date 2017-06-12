@@ -304,6 +304,10 @@ class User extends OrganizationalPerson {
      */
     public $roomNumber;
 
+    /**
+     * @Attribute("msDS-ResultantPSO")
+     */
+    public $msDsResultantPso;
 
     /**
      * @Attribute("street")
@@ -793,4 +797,16 @@ class User extends OrganizationalPerson {
     public function setWhenCreated($whenCreated) {
         $this->whenCreated = $whenCreated;
     }
+
+    public function getMsDsResultantPso()
+    {
+        return $this->msDsResultantPso;
+    }
+
+    public function setMsDsResultantPso($msDsResultantPso)
+    {
+        $this->msDsResultantPso = $msDsResultantPso;
+    }
+
+
 }

@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Must;
+use Ucsf\LdapOrmBundle\Annotation\Ldap\Operational;
 
 class LdapEntity implements \JsonSerializable {
 
@@ -123,7 +124,20 @@ class LdapEntity implements \JsonSerializable {
      * @Attribute("dn")
      */
     protected $dn;
-    
+
+    /**
+     * @Attribute("whenChanged")
+     * @Operational()
+     */
+    protected $whenChanged;
+
+    /**
+     * @Attribute("whenCreated")
+     * @Operational()
+     */
+    protected $whenCreated;
+
+
     public function getObjectClass() {
         return $this->objectClass;
     }
@@ -181,6 +195,27 @@ class LdapEntity implements \JsonSerializable {
         }
         return $this->getNotRetrieveAttributes();
     }
+
+    public function getWhenChanged()
+    {
+        return $this->whenChanged;
+    }
+
+    public function setWhenChanged($whenChanged)
+    {
+        $this->whenChanged = $whenChanged;
+    }
+
+    public function getWhenCreated()
+    {
+        return $this->whenCreated;
+    }
+
+    public function setWhenCreated($whenCreated)
+    {
+        $this->whenCreated = $whenCreated;
+    }
+
 
 
 }

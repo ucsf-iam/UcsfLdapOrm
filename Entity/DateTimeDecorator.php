@@ -43,6 +43,16 @@ class DateTimeDecorator
         $this->format = $format;
     }
 
+
+    /**
+     * @return \DateTime
+     */
+    public function getInstance()
+    {
+        return $this->_instance;
+    }
+
+
     /**
      * Decorator of a DateTime object (adding __toString() and setFormat method)
      * @param  string|DateTime  $datetime
