@@ -23,6 +23,15 @@ class User extends OrganizationalPerson {
 
     const SAMACCOUNTNAME_REGEX = '/^[^"\/\\\[\]:;\|=,\+\*\?<>\@]{1,20}$/';
 
+    public function getDomain() {
+        $domain = null;
+        if (!empty($this->dn)) {
+            $rdns = explode(',dc=', strtolower($this->dn));
+            array_shift($rdns);
+            $domain = implode('.', $rdns);
+        }
+        return $domain;
+    }
 
     /**
      * @Attribute("co")
