@@ -105,6 +105,7 @@ class LdapEntityManager
 
         $this->ldapResource = ldap_connect($this->uri);
         ldap_set_option($this->ldapResource, LDAP_OPT_PROTOCOL_VERSION, 3);
+        ldap_set_option($this->ldapResource, LDAP_OPT_REFERRALS, 0);
 
         // Switch to TLS, if configured
         if ($this->useTLS) {
