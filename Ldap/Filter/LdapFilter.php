@@ -22,13 +22,15 @@
 namespace Ucsf\LdapOrmBundle\Ldap\Filter;
 
 use Ucsf\LdapOrmBundle\Exception\Filter\InvalidLdapFilterException;
+use Ucsf\LdapOrmBundle\Ldap\Util;
 
 class LdapFilter
 {
     
 	private $filterArray;
+    private $forActiveDirectory;
 
-	function __construct($filterArray=null)
+	function __construct($filterArray=null, $forActiveDirectory = false)
 	{
             if (empty($filterArray)) {
                 $this->filterArray = array('objectClass' => '*');
@@ -38,6 +40,7 @@ class LdapFilter
                 }
                 $this->filterArray = $filterArray;
             }
+            $this->forActiveDirectory = $forActiveDirectory;
 	}
         
         /**
@@ -123,7 +126,7 @@ class LdapFilter
          * @return string An LDAP filter
          */
     public function format() {
-        return self::_format($this->filterArray);
+        return self::_format($this->filterArray, $this->forActiveDirectory);
     }
 
     function getFilterArray() {
@@ -134,7 +137,7 @@ class LdapFilter
         $this->filterArray = $filterArray;
     }
 
-    public static function _format($filterData) {
+    public static function _format($filterData, $forActiveDirectory) {
         if (!is_array($filterData)) {
             throw new InvalidLdapFilterException('The filter must be an array');
         }        
@@ -167,7 +170,7 @@ class LdapFilter
                         }
                         $subfilter .= '(|' . $multivalue . ')';
                     } else { // iterate into complex sub-filter
-                        $subfilter .= '(' . $key . self::_format($val) . ')';
+                        $subfilter .= '(' . $key . self::_format($val, $forActiveDirectory) . ')';
                     }
                 } else { // simple filter
                     $op = '=';
@@ -179,7 +182,17 @@ class LdapFilter
                         $key = substr($key, 0, -2);
                         $op = $matches[1];
                     }
-                    $val = self::escapeLdapValue($val);
+                    if (is_a($val, \DateTime::class)) {
+                        if ($forActiveDirectory) {
+                            $val = Util::datetimeToAdDate($val);
+                        } else {
+                            $val = Util::datetimeToLdapDate($val);
+
+                        }
+                    } else {
+                        $val = self::escapeLdapValue($val);
+                    }
+
                     $subfilter .= '(' . $key . $op . $val . ')';
                 }
             }

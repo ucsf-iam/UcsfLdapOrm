@@ -105,7 +105,6 @@ class LdapEntityManager
 
         $this->ldapResource = ldap_connect($this->uri);
         ldap_set_option($this->ldapResource, LDAP_OPT_PROTOCOL_VERSION, 3);
-        ldap_set_option($this->ldapResource, LDAP_OPT_REFERRALS, 0);
 
         // Switch to TLS, if configured
         if ($this->useTLS) {
@@ -724,7 +723,7 @@ class LdapEntityManager
                         $options['filter']
                     )
                 );
-                $ldapFilter = new LdapFilter($options['filter']);
+                $ldapFilter = new LdapFilter($options['filter'], $this->isActiveDirectory);
                 $filter = $ldapFilter->format();
             } else if (is_a ($options['filter'], LdapFilter::class)){
                 $options['filter']->setFilterArray(
@@ -857,13 +856,16 @@ class LdapEntityManager
         return ldap_next_entry($this->ldapResource, $rawResult);
     }
 
+    /**
+     * @param $rawFilter
+     * @param $attributes
+     * @param $count
+     * @param $searchDN
+     * @return resource
+     * @throws \Exception
+     */
     public function doRawLdapSearch($rawFilter, $attributes, $count, $searchDN)
     {
-        $output = new ConsoleOutput();
-//        $output->writeln('LEM: '.$searchDN);
-//        $output->writeln('LEM: '.$rawFilter);
-
-        // Connect if needed
         $this->connect();
         $this->logger->debug(sprintf("request on ldap root:%s with filter:%s", $searchDN, $rawFilter));
         return ldap_search($this->ldapResource,
@@ -873,7 +875,11 @@ class LdapEntityManager
             0);
     }
 
-    
+    /**
+     * @param LdapFilter $filter
+     * @param $entityName
+     * @return null|LdapIterator
+     */
     public function getIterator(LdapFilter $filter, $entityName) {
         if (empty($this->iterator)) {
             $this->iterator = new LdapIterator($filter, $entityName, $this);
