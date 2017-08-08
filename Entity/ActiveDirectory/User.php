@@ -332,6 +332,11 @@ class User extends OrganizationalPerson {
     }
 
     /**
+     * @Attribute("accountExpires")
+     */
+    public $accountExpires;
+
+    /**
      * @param mixed $street
      */
     public function setStreet($street)
@@ -815,6 +820,22 @@ class User extends OrganizationalPerson {
     public function setMsDsResultantPso($msDsResultantPso)
     {
         $this->msDsResultantPso = $msDsResultantPso;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getAccountExpires()
+    {
+        return $this->accountExpires;
+    }
+
+    /**
+     * @param mixed $accountExpires
+     */
+    public function setAccountExpires($accountExpires)
+    {
+        $this->accountExpires = $accountExpires;
     }
 
 
