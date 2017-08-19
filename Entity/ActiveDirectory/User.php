@@ -823,7 +823,7 @@ class User extends OrganizationalPerson {
     }
 
     /**
-     * @return mixed
+     * @return \DateTime
      */
     public function getAccountExpires()
     {
@@ -831,12 +831,30 @@ class User extends OrganizationalPerson {
     }
 
     /**
-     * @param mixed $accountExpires
+     * @param \DateTime $accountExpires
      */
     public function setAccountExpires($accountExpires)
     {
         $this->accountExpires = $accountExpires;
     }
 
+    public function getAccountExpiresString($format = 'F j, Y h:i:s', $never = 'Never', $unknown = 'Unknown') {
+        $str = $unknown;
+        if (is_a($this->accountExpires, \DateTime::class)) {
+            if ($this->accountExpires->format('Y') > 30827) {
+                $str = $never;
+            } else  if ($this->accountExpires->format('Y') < 1602) {
+                $str = $never;
+            } else {
+                $str = $this->accountExpires->format($format);
+            }
+        } else {
+            if ($this->accountExpires == 0) {
+                $str = $never;
+            }
+        }
+
+        return $str;
+    }
 
 }
