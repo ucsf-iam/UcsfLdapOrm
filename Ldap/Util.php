@@ -44,10 +44,12 @@ class Util
     public static function adDateToDatetime($input)
     {
         $adMilliseconds = (float)str_replace('.0Z', '', $input);
-        $adSeconds = $adMilliseconds / 10000000.0;
+        $adSeconds = number_format($adMilliseconds / 10000000.0, 2, '.', '');
         list($adSeconds, $adMilliseconds) = explode('.', $adSeconds);
         $unixTimestamp = $adSeconds - self::UNIX_EPOCH_DIFFERENCE;
-        return \DateTime::createFromFormat('U.u', $unixTimestamp.'.'.$adMilliseconds);
+        $dt = \DateTime::createFromFormat('U.u', $unixTimestamp.'.'.$adMilliseconds);
+        $dt->setTimezone((new \DateTime())->getTimezone());
+        return $dt;
     }
 
     /**
@@ -59,12 +61,7 @@ class Util
      * @return string
      */
     public static function datetimeToAdDate(\DateTime $input) {
-        $unixTimestamp = $input->format('U');
-
-        $utcDateTime  = (new \DateTime())->setTimezone(new \DateTimeZone('UTC'));
-        $offset = (new \DateTime())->getTimezone()->getOffset($utcDateTime);
-        $unixTimestamp += $offset;
-
+        $unixTimestamp = $input->format('U'); // Note! This conversts to a UTC timestamp!
         $milliseconds = $input->format('u');
         $adSeconds = $unixTimestamp + self::UNIX_EPOCH_DIFFERENCE;
         $adMilliseconds = $adSeconds  . $milliseconds;

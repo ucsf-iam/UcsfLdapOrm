@@ -17,9 +17,11 @@ class UtilTest extends WebTestCase
 {
 
     // Generated from https://www.epochconverter.com/ldap
-    const AD_TEST_TIME = 'July 25, 2017 2:48:05.477000 AM'; // GMT
+    const AD_TEST_TIME_GMT = 'July 25, 2017 2:48:05.480000 AM';
+    const AD_TEST_TIME_PDT = 'July 24, 2017 7:48:05.480000 PM';
     const AD_TEST_TIME_FORMAT = 'F j, Y g:i:s.u A';
-    const AD_TEST_TIMESTAMP = '131454244854770000';
+    const AD_TEST_TIMESTAMP = '131454244854800000';
+    const AD_TEST_UNIXEPOCH = '1500950885';
 
     const LDAP_TEST_TIME = 'July 25, 2017 2:48:05 AM'; // GMT
     const LDAP_TEST_TIME_FORMAT = 'F j, Y g:i:s A';
@@ -40,12 +42,13 @@ class UtilTest extends WebTestCase
 
     public function testAdDateToDatetime() {
         $adDateTime = Util::adDateToDatetime(self::AD_TEST_TIMESTAMP);
-        $this->assertEquals(self::AD_TEST_TIME, $adDateTime->format(self::AD_TEST_TIME_FORMAT));
+        $this->assertEquals(self::AD_TEST_TIME_PDT, $adDateTime->format(self::AD_TEST_TIME_FORMAT));
+        $this->assertEquals(self::AD_TEST_UNIXEPOCH, $adDateTime->format('U'));
     }
     
 
     public function testDatetimeToAdDate() {
-        $adDate = Util::datetimeToAdDate(\DateTime::createFromFormat(self::AD_TEST_TIME_FORMAT, self::AD_TEST_TIME));
+        $adDate = Util::datetimeToAdDate(\DateTime::createFromFormat(self::AD_TEST_TIME_FORMAT, self::AD_TEST_TIME_PDT));
         $this->assertEquals(self::AD_TEST_TIMESTAMP, $adDate);
     }
 

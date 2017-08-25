@@ -946,7 +946,7 @@ class LdapEntityManager
                 try {
                     if(preg_match('/^\d{14}/', $entryData[$attrValue][0])) {
                         if ($this->isActiveDirectory) {
-                            $datetime = Converter::fromAdDateTime($entryData[$attrValue][0], false);
+                            $datetime = Util::adDateToDatetime($entryData[$attrValue][0]);
                         } else {
                             $datetime = Converter::fromLdapDateTime($entryData[$attrValue][0], false);
                         }
