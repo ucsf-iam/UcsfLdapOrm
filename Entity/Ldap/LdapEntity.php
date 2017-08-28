@@ -49,7 +49,11 @@ class LdapEntity implements \JsonSerializable {
             if (is_array($objectVarValue)) {
                 $encoded[$objectVarName] = array();
                 foreach($objectVarValue as $arrayKey => $arrayValue) {
-                    $encoded[$objectVarName][$arrayKey] = json_encode($arrayValue);
+                    if (is_scalar($arrayValue)) {
+                        $encoded[$objectVarName][$arrayKey] = utf8_encode($arrayValue);
+                    } else {
+                        $encoded[$objectVarName][$arrayKey] = json_encode($arrayValue);
+                    }
                 }
             } else if (is_scalar($objectVarValue)) {
                 $encoded[$objectVarName] = utf8_encode($objectVarValue);
