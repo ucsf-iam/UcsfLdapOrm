@@ -23,14 +23,25 @@ class User extends OrganizationalPerson {
 
     const SAMACCOUNTNAME_REGEX = '/^[^"\/\\\[\]:;\|=,\+\*\?<>\@]{1,20}$/';
 
+    public $domain;
+
     public function getDomain() {
-        $domain = null;
-        if (!empty($this->dn)) {
-            $rdns = explode(',dc=', strtolower($this->dn));
-            array_shift($rdns);
-            $domain = implode('.', $rdns);
+        if (!$this->domain) {
+            $domain = null;
+            if (!empty($this->dn)) {
+                $rdns = explode(',dc=', strtolower($this->dn));
+                array_shift($rdns);
+                $this->domain = implode('.', $rdns);
+            }
         }
-        return $domain;
+
+        return $this->domain;
+    }
+
+    public function setDn($dn)
+    {
+        parent::setDn($dn);
+        $this->getDomain(); // Now that we have the DN, prime the $this->domain convenience member variable
     }
 
     /**

@@ -319,8 +319,8 @@ class LdapEntityManager
             }
 
             if(is_object($value)) {
-                if ($value instanceof DateTime) {
-                    $entry[$attribute] = Converter::toLdapDateTime($value, false);
+                if ($value instanceof \DateTime) {
+                    $entry[$attribute] = Util::datetimeToAdDate($value);
                 }
                 elseif ($value instanceof DateTimeDecorator) {
                     $entry[$attribute] = (string)$value;
@@ -554,7 +554,7 @@ class LdapEntityManager
             }
             // If the modified value is empty, first make sure it was an attribute that was originall
             // retrieved. If so, set the delete operations to use the original value.
-            if (is_null($value) || empty($value)) {
+            if (is_null($value) || (empty($value) && $value !== 0 &&  $value !== FALSE)) {
                 if (!in_array($attribute, $notRetrievedAttributes)) {
                     $operands[self::OPERAND_DEL][$attribute] = $originalEntry[$attribute];
                 }
