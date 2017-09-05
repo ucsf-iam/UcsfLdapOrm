@@ -849,5 +849,22 @@ class User extends OrganizationalPerson {
         $this->accountExpires = $accountExpires;
     }
 
-
+    public function getAccountExpiresString($format = 'F j, Y h:i:s A') {
+        $str = 'Unknown';
+        if (isset($this->accountExpires)) {
+            if (is_object($this->accountExpires)) {
+                if (is_a($this->accountExpires, \DateTime::class)) {
+                    $str = $this->accountExpires->format($format);
+                    if (strpos($str, 'September 13, 30828') !== FALSE) {
+                        $str = 'Never';
+                    }
+                }
+            } else {
+                if ($this->accountExpires == 0) {
+                    $str = 'Never';
+                }
+            }
+        }
+        return $str;
+    }
 }
