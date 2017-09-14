@@ -1016,8 +1016,18 @@ class LdapEntityManager
         $template = $this->twig->createTemplate($templateString);
         return $template->render($variables);
     }
+
+
+    public function rename($dn, $newRdn, $newParent, $deleteOld = TRUE) {
+        if (!ldap_rename($this->ldapResource, $dn, $newRdn, $newParent, $deleteOld)) {
+            throw new RenameException(ldap_error($this->ldapResource));
+        }
+        return TRUE;
+    }
 }
 
 class MissingMustAttributeException extends \Exception {}
 
 class MissingSearchDn extends \Exception {}
+
+class RenameException extends \Exception {}
