@@ -29,13 +29,14 @@ Requires PHP5.5+ and Symphony 2.7+
 #### Configure an LDAP service in config.yml
 
 ```
-some_ldap_server:
-    connection:
+parameters:
+    some_ldap_server:
         uri: ldaps://ldap.example.com
         use_tls: true
         bind_dn: cn=admin,dc=example,dc=com
         password: shhhItsASecret
         password_type: plaintext
+    ucsfldaporm_test: false
 ```
 
 * __uri__: The URI you need for connecting to the LDAP service.
@@ -50,7 +51,8 @@ some_ldap_server:
 services:
     myldap_entity_manager:
         class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
-        arguments: ["@logger", "@twig", ""@annotation_reader", "%some_ldap_server%"]
+        public: true
+        arguments: ["@logger", "@annotation_reader", "%some_ldap_server%"]
     comexample_person_service:
         class: MyBundle\ComExamplePersonService
         arguments: [ @myldap_entity_manager ]
@@ -101,12 +103,12 @@ class ComExamplePerson extends InetOrgPerson
     
     ...
 }
-
+```
 
 #### Coding the Service
 
 ```
-class ComExamplePersonService {
+    class ComExamplePersonService {
 
     protected $comExamplePersonRepository;
 
@@ -143,6 +145,7 @@ class ComExamplePersonService {
             return array('person' => $person);
         }
 ````
+
 
 ## To do
 
