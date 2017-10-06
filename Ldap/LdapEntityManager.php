@@ -18,7 +18,7 @@
  * Foundation, Inc.,                                                       *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                   *
  ***************************************************************************/
- 
+
 namespace Ucsf\LdapOrmBundle\Ldap;
 
 use Doctrine\Common\Annotations\Reader;
@@ -46,7 +46,7 @@ use Symfony\Bridge\Monolog\Logger;
 
 /**
  * Entity Manager for LDAP
- * 
+ *
  * @author Mathieu GOULIN <mathieu.goulin@gadz.org>
  * @author Jason Gabler <jasongabler@gmail.com>
  */
@@ -93,7 +93,7 @@ class LdapEntityManager
 
     /**
      * Connect to LDAP service
-     * 
+     *
      * @return LDAP resource
      */
     private function connect()
@@ -197,9 +197,9 @@ class LdapEntityManager
 
     /**
      * Return the class metadata instance
-     * 
+     *
      * @param string $entityName
-     * 
+     *
      * @return ClassMetaDataCollection
      */
     public function getClassMetadata($entityName)
@@ -229,7 +229,7 @@ class LdapEntityManager
 
         foreach ($r->getProperties() as $publicAttr) {
             $annotations = $this->reader->getPropertyAnnotations($publicAttr);
-            
+
             foreach ($annotations as $annotation) {
                 if ($annotation instanceof Attribute) {
                     $varname=$publicAttr->getName();
@@ -269,9 +269,9 @@ class LdapEntityManager
 
     /**
      * Convert an entity to array using annotation reader
-     * 
+     *
      * @param LdapEntity $entity
-     * 
+     *
      * @return array
      */
     public function entityToEntry(LdapEntity $entity)
@@ -329,11 +329,11 @@ class LdapEntityManager
                     $entry[$attribute] = $this->buildEntityDn($value);
                 }
             } elseif(is_array($value) && !empty($value) && isset($value[0]) && is_object($value[0])) {
-                    $valueArray = array();
-                    foreach($value as $val) {
-                        $valueArray[] = $this->buildEntityDn($val);
-                    }
-                    $entry[$attribute] = $valueArray;
+                $valueArray = array();
+                foreach($value as $val) {
+                    $valueArray[] = $this->buildEntityDn($val);
+                }
+                $entry[$attribute] = $valueArray;
             } elseif(strtolower($attribute) == "userpassword") {
                 if (is_array($value)) {
                     foreach ($value as $val) {
@@ -356,9 +356,9 @@ class LdapEntityManager
 
     /**
      * Build a DN for an entity with the use of dn annotation
-     * 
+     *
      * @param unknown_type $instance
-     * 
+     *
      * @return string
      */
     public function buildEntityDn($instance)
@@ -395,18 +395,22 @@ class LdapEntityManager
         }
 
         $dn = $entity->getDn();
-
+        if($dn == NULL) {
+            $dn = $this->buildEntityDn($entity);
+            $entity->setDn($dn);
+        }
         // test if entity already exist
 
         if (!$originalEntity) {
             $result = $this->entityExists($entity, false);
             $originalEntity = reset($result);
+            if($originalEntity == false) $originalEntity = null;
         }
         if(count($originalEntity) > 0)
         {
             return $this->ldapUpdate($dn, $entity, $originalEntity);
         }
-        return $this->ldapPersist($dn, $this->entityToEntry($entity));
+        return $this->ldapPersist($dn, $entity);
     }
 
     /**
@@ -414,10 +418,10 @@ class LdapEntityManager
      * @param unknown_type $instance
      */
     public function delete($instance)
-    {  
+    {
         $dn = $this->buildEntityDn($instance);
         $this->logger->debug('Delete in LDAP: ' . $dn );
-	$this->deleteByDn($dn, true);
+        $this->deleteByDn($dn, true);
         return;
     }
 
@@ -463,7 +467,7 @@ class LdapEntityManager
      * Gets the repository for an entity class.
      *
      * @param string $entityName The name of the entity.
-     * 
+     *
      * @return EntityRepository The repository class.
      */
     public function getRepository($entityName)
@@ -475,9 +479,9 @@ class LdapEntityManager
         }
         return new Repository($this, $metadata);
     }
-    
 
-    
+
+
     /**
      * Check the MUST attributes for the given object according to its LDAP
      * objectClass. If all MUST attributes are satisfied checkMust() will return
@@ -487,7 +491,7 @@ class LdapEntityManager
      */
     public function checkMust($instance) {
         $classMetaData = $this->getClassMetaData(get_class($instance));
-        
+
         foreach ($classMetaData->getMust() as $mustAttributeName => $existence) {
             $getter = 'get'.ucfirst($mustAttributeName);
             $value = $instance->$getter();
@@ -501,17 +505,19 @@ class LdapEntityManager
 
     /**
      * Persist an array using ldap function
-     * 
+     *
      * @param unknown_type $dn
      * @param array        $entry
      */
-    private function ldapPersist($dn, Array $entry)
+    private function ldapPersist($dn, LdapEntity $entity)
     {
         // Connect if needed
         $this->connect();
-        
+
+        $entry = $this->entityToEntry($entity);
+
         list($toInsert,) = $this->splitArrayForUpdate($entry);
-        $operands = $this->getEntityOperands($entry);
+        //$operands = $this->getEntityOperands($entry);
 
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
         return ldap_add($this->ldapResource, $dn, $toInsert);
@@ -558,7 +564,7 @@ class LdapEntityManager
                 if (!in_array($attribute, $notRetrievedAttributes)) {
                     $operands[self::OPERAND_DEL][$attribute] = $originalEntry[$attribute];
                 }
-            // If modified is not the same value as the original, and it's not empty, if must be a real modify
+                // If modified is not the same value as the original, and it's not empty, if must be a real modify
             } else {
                 if (is_array($value)) {
                     $value = $this->getEntityOperands($value)[self::OPERAND_MOD];
@@ -576,7 +582,7 @@ class LdapEntityManager
      * Splits modified and removed attributes and make sure they are compatible with ldap_modify & insert
      *
      * @param array        $entry
-     * 
+     *
      * @return array
      */
     private function splitArrayForUpdate($entry, $currentEntity = null)
@@ -587,6 +593,7 @@ class LdapEntityManager
                 return !is_null($elm) && $elm!==false && $elm!=='';
             }
         );
+
         $toDelete = array_fill_keys(array_keys(array_diff_key($entry, $toModify)), array());
         if ($currentEntity != null) {
             $currentEntry = $this->entityToEntry($currentEntity);
@@ -596,6 +603,7 @@ class LdapEntityManager
                 }
             }
         }
+
         foreach ($toModify as &$val) {
             if (is_array($val)) {
                 list($val,) = $this->splitArrayForUpdate($val); // Multi-dimensional arrays are also fixed
@@ -607,10 +615,9 @@ class LdapEntityManager
                 $val = new DateTimeDecorator($val);
             }
         }
-
-        return array(array_values($toModify), array_values($toDelete)); // array_merge is to re-index gaps in keys
+        return array(array_merge($toModify), array_merge($toDelete)); // array_merge is to re-index gaps in keys
     }
-    
+
     /**
      * Update an object in ldap with array
      *
@@ -656,7 +663,7 @@ class LdapEntityManager
     /**
      * The core of ORM behavior for this bundle: retrieve data
      * from LDAP and convert results into objects.
-     * 
+     *
      * Options maybe:
      *
      * attributes (array): array of attribute types (strings)
@@ -711,7 +718,7 @@ class LdapEntityManager
             // throw new MissingSearchDn('Could not discern search DN while searching for '.$entityName);
             $searchDn = '';
         }
-        
+
         // Discern LDAP filter
         $objectClass = $instanceMetadataCollection->getObjectClass();
         if (empty($options['filter'])) {
@@ -823,12 +830,12 @@ class LdapEntityManager
             foreach ($infos as $entry) {
                 if(is_array($entry)) {
                     $data[] = $this->entryToEntity($entityName, $entry);
-                        }
-                    }
+                }
+            }
         } catch(Exception $e) {
             $data = array();
         }
- 
+
         return $data;
     }
 
@@ -890,7 +897,7 @@ class LdapEntityManager
 
 
     public function cleanArray($array)
-    {  
+    {
         $newArray = array();
         foreach(array_keys($array) as $key) {
             $newArray[strtolower($key)] = $array[$key];
@@ -960,7 +967,7 @@ class LdapEntityManager
                 } catch (Exception $e) {
                     $this->logger->error(sprintf("Exception in ldap to entity mapping : %s", $e->getMessage()));
                 }
-           }
+            }
         }
         foreach($instanceMetadataCollection->getDnRegex() as $attrName => $regex) {
             preg_match_all($regex, $entryData['dn'], $matches);

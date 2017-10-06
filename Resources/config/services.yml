@@ -11,5 +11,5 @@
 services:
     ucsf_ldap_orm.entity_manager:
       class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
-      arguments: [ "@logger", "@annotation_reader", %ucsfldaporm_test% ]
+      arguments: [ "@logger", "@annotation_reader", "%ucsfldaporm_test%" ]
 
