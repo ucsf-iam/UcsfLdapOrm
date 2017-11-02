@@ -396,8 +396,7 @@ class LdapEntityManager
 
         $dn = $entity->getDn();
 
-        // test if entity already exist
-
+        // test if entity already exists
         if (!$originalEntity) {
             $result = $this->entityExists($entity, false);
             $originalEntity = reset($result);

@@ -23,7 +23,85 @@ class User extends OrganizationalPerson {
 
     const SAMACCOUNTNAME_REGEX = '/^[^"\/\\\[\]:;\|=,\+\*\?<>\@]{1,20}$/';
 
+
+    const ADS_UF_SCRIPT                                  = 1;        // 0x1
+    const ADS_UF_ACCOUNTDISABLE                          = 2;        // 0x2
+    const ADS_UF_HOMEDIR_REQUIRED                        = 8;        // 0x8
+    const ADS_UF_LOCKOUT                                 = 16;       // 0x10
+    const ADS_UF_PASSWD_NOTREQD                          = 32;       // 0x20
+    const ADS_UF_PASSWD_CANT_CHANGE                      = 64;       // 0x40
+    const ADS_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED         = 128;      // 0x80
+    const ADS_UF_TEMP_DUPLICATE_ACCOUNT                  = 256;      // 0x100
+    const ADS_UF_NORMAL_ACCOUNT                          = 512;      // 0x200
+    const ADS_UF_INTERDOMAIN_TRUST_ACCOUNT               = 2048;     // 0x800
+    const ADS_UF_WORKSTATION_TRUST_ACCOUNT               = 4096;     // 0x1000
+    const ADS_UF_SERVER_TRUST_ACCOUNT                    = 8192;     // 0x2000
+    const ADS_UF_DONT_EXPIRE_PASSWD                      = 65536;    // 0x10000
+    const ADS_UF_MNS_LOGON_ACCOUNT                       = 131072;   // 0x20000
+    const ADS_UF_SMARTCARD_REQUIRED                      = 262144;   // 0x40000
+    const ADS_UF_TRUSTED_FOR_DELEGATION                  = 524288;   // 0x80000
+    const ADS_UF_NOT_DELEGATED                           = 1048576;  // 0x100000
+    const ADS_UF_USE_DES_KEY_ONLY                        = 2097152;  // 0x200000
+    const ADS_UF_DONT_REQUIRE_PREAUTH                    = 4194304;  // 0x400000
+    const ADS_UF_PASSWORD_EXPIRED                        = 8388608;  // 0x800000
+    const ADS_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION  = 16777216; // 0x1000000
+
+    const ADS_UF_SCRIPT_STR                                  = 'script';
+    const ADS_UF_ACCOUNTDISABLE_STR                          = 'account disabled';
+    const ADS_UF_HOMEDIR_REQUIRED_STR                        = 'home directory required';
+    const ADS_UF_LOCKOUT_STR                                 = 'lockout';
+    const ADS_UF_PASSWD_NOTREQD_STR                          = 'password not required';
+    const ADS_UF_PASSWD_CANT_CHANGE_STR                      = 'password cannot change';
+    const ADS_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED_STR         = 'encrypted text password allowed';
+    const ADS_UF_TEMP_DUPLICATE_ACCOUNT_STR                  = 'temporary duplicate account';
+    const ADS_UF_NORMAL_ACCOUNT_STR                          = 'normal account';
+    const ADS_UF_INTERDOMAIN_TRUST_ACCOUNT_STR               = 'interdomain trust account';
+    const ADS_UF_WORKSTATION_TRUST_ACCOUNT_STR               = 'workstation trust account';
+    const ADS_UF_SERVER_TRUST_ACCOUNT_STR                    = 'server trust account';
+    const ADS_UF_DONT_EXPIRE_PASSWD_STR                      = 'password does not expire';
+    const ADS_UF_MNS_LOGON_ACCOUNT_STR                       = 'MNS logon account';
+    const ADS_UF_SMARTCARD_REQUIRED_STR                      = 'smartcard required';
+    const ADS_UF_TRUSTED_FOR_DELEGATION_STR                  = 'trusted for delegation';
+    const ADS_UF_NOT_DELEGATED_STR                           = 'not delegated';
+    const ADS_UF_USE_DES_KEY_ONLY_STR                        = 'use DES key only';
+    const ADS_UF_DONT_REQUIRE_PREAUTH_STR                    = 'pre-auth not required';
+    const ADS_UF_PASSWORD_EXPIRED_STR                        = 'password not required';
+    const ADS_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION_STR  = 'trusted to authenticate for delegation';
+
     public $domain;
+
+    public $userAccountControlDict = [];
+
+
+    public function __construct($username = null, $roles = null)
+    {
+        parent::__construct($username, $roles);
+
+        $this->userAccountControlDict = [
+          self::ADS_UF_SCRIPT => self::ADS_UF_SCRIPT_STR,
+          self::ADS_UF_ACCOUNTDISABLE => self::ADS_UF_ACCOUNTDISABLE_STR,
+          self::ADS_UF_HOMEDIR_REQUIRED => self::ADS_UF_HOMEDIR_REQUIRED_STR,
+          self::ADS_UF_LOCKOUT => self::ADS_UF_LOCKOUT_STR,
+          self::ADS_UF_PASSWD_NOTREQD => self::ADS_UF_PASSWD_NOTREQD_STR,
+          self::ADS_UF_PASSWD_CANT_CHANGE => self::ADS_UF_PASSWD_CANT_CHANGE_STR,
+          self::ADS_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED => self::ADS_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED_STR,
+          self::ADS_UF_TEMP_DUPLICATE_ACCOUNT => self::ADS_UF_TEMP_DUPLICATE_ACCOUNT_STR,
+          self::ADS_UF_NORMAL_ACCOUNT => self::ADS_UF_NORMAL_ACCOUNT_STR,
+          self::ADS_UF_INTERDOMAIN_TRUST_ACCOUNT => self::ADS_UF_INTERDOMAIN_TRUST_ACCOUNT_STR,
+          self::ADS_UF_WORKSTATION_TRUST_ACCOUNT => self::ADS_UF_WORKSTATION_TRUST_ACCOUNT_STR,
+          self::ADS_UF_SERVER_TRUST_ACCOUNT => self::ADS_UF_SERVER_TRUST_ACCOUNT_STR,
+          self::ADS_UF_DONT_EXPIRE_PASSWD => self::ADS_UF_DONT_EXPIRE_PASSWD_STR,
+          self::ADS_UF_MNS_LOGON_ACCOUNT => self::ADS_UF_MNS_LOGON_ACCOUNT_STR,
+          self::ADS_UF_SMARTCARD_REQUIRED => self::ADS_UF_SMARTCARD_REQUIRED_STR,
+          self::ADS_UF_TRUSTED_FOR_DELEGATION => self::ADS_UF_TRUSTED_FOR_DELEGATION_STR,
+          self::ADS_UF_NOT_DELEGATED => self::ADS_UF_NOT_DELEGATED_STR,
+          self::ADS_UF_USE_DES_KEY_ONLY => self::ADS_UF_USE_DES_KEY_ONLY_STR,
+          self::ADS_UF_DONT_REQUIRE_PREAUTH => self::ADS_UF_DONT_REQUIRE_PREAUTH_STR,
+          self::ADS_UF_PASSWORD_EXPIRED => self::ADS_UF_PASSWORD_EXPIRED_STR,
+          self::ADS_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION => self::ADS_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION_STR,
+        ];
+    }
+
 
     public function getDomain() {
         if (!$this->domain) {
@@ -602,6 +680,18 @@ class User extends OrganizationalPerson {
     public function getUserAccountControl() {
         return $this->userAccountControl;
     }
+
+    public function getUserAccountControlStrings() {
+        $strings = [];
+        if ($this->userAccountControl) {
+            foreach ($this->userAccountControlDict as $key => $val) {
+                if ($key & $this->userAccountControl) {
+                    $strings[$key] = $val;
+                }
+            }
+        }
+        return $strings;
+    }    
 
     public function getUserPrincipalName() {
         return $this->userPrincipalName;
