@@ -22,6 +22,7 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Operational;
 class User extends OrganizationalPerson {
 
     const SAMACCOUNTNAME_REGEX = '/^[^"\/\\\[\]:;\|=,\+\*\?<>\@]{1,20}$/';
+    const MS_EXCH_RECIPIENT_TYPE_DETAILS_ENABLED = '2147483648';
 
 
     const ADS_UF_SCRIPT                                  = 1;        // 0x1
@@ -121,6 +122,15 @@ class User extends OrganizationalPerson {
         parent::setDn($dn);
         $this->getDomain(); // Now that we have the DN, prime the $this->domain convenience member variable
     }
+
+
+    /**
+     * Is this account mail-enabled?
+     */
+    public function isMailEnabled() {
+        return $this->getMsExchRecipientTypeDetails() == self::MS_EXCH_RECIPIENT_TYPE_DETAILS_ENABLED;
+    }
+
 
     /**
      * @Attribute("co")
