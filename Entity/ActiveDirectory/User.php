@@ -950,7 +950,7 @@ class User extends OrganizationalPerson {
     }
 
     public function getAccountExpiresString($format = 'F j, Y h:i:s A') {
-        $str = 'Unknown';
+        $str = '';
         if (isset($this->accountExpires)) {
             if (is_object($this->accountExpires)) {
                 if (is_a($this->accountExpires, \DateTime::class)) {
@@ -967,4 +967,33 @@ class User extends OrganizationalPerson {
         }
         return $str;
     }
+
+    public function getPwdLastSetString($format = 'F j, Y h:i:s A') {
+        $str = '';
+        if (isset($this->pwdLastSet)) {
+            if (is_object($this->pwdLastSet)) {
+                if (is_a($this->pwdLastSet, \DateTime::class)) {
+                    $str = $this->pwdLastSet->format($format);
+                }
+            } else {
+                if ($this->pwdLastSet == 0) {
+                    $str = 'Never';
+                }
+            }
+        }
+        return $str;
+    }
+
+    public function getLastLogonTimestampString($format = 'F j, Y h:i:s A') {
+        $str = 'Not Available';
+        if (isset($this->lastLogonTimestamp)) {
+            if (is_object($this->lastLogonTimestamp)) {
+                if (is_a($this->lastLogonTimestamp, \DateTime::class)) {
+                    $str = $this->lastLogonTimestamp->format($format);
+                }
+            }
+        }
+        return $str;
+    }
+
 }
