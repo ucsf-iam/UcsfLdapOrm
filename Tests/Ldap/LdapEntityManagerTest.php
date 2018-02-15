@@ -8,18 +8,21 @@
 
 namespace Ucsf\LdapOrmBundle\Tests\Ldap;
 
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-use Ucsf\LdapOrmBundle\Entity\Ldap\OrganizationalPerson;
-use Ucsf\LdapOrmBundle\Ldap\Converter;
-use Ucsf\LdapOrmBundle\Tests\DatabaseTestCase;
 
-class LdapEntityManagerTest extends DatabaseTestCase {
+class LdapEntityManagerTest extends WebTestCase {
 
-    public function testAdDateConversion() {
-        $adTimestamp = '130898490540000000.0Z';
-        $decorator = Converter::fromAdDateTime($adTimestamp);
-        $convertedAdTimestamp = Converter::toAdDateTime($decorator);
+    private $ldapEntityManager;
 
-        $this->assertEquals($adTimestamp, $convertedAdTimestamp);
+    public function setUp() {
+        $container = static::bootKernel()->getContainer();
+        $this->ldapEntityManager = $container->get('ucsf_ldap_orm_entity_manager');
+    }
+
+    public function testFind() {
+        
+        $this->ldapEntityManager->find()
+
     }
 }

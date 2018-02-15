@@ -28,4 +28,30 @@ class UcsfLdapOrmExtension extends Extension
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yml');
     }
+
+
+    public function load(array $configs, ContainerBuilder $container) {
+        $configuration = $this->getConfiguration($configs, $container);
+        $config = $this->processConfiguration($configuration, $configs);
+
+        $entityManagerAliasTemplate = 'ucsf_ldap_orm.%s';
+        $container->setParameter('ucsf_ldap_orm_config', $config);
+        $entityManagers = $config['entity_managers'];
+        $connections = $config['connections'];
+
+        foreach ($entityManagers as $entityManagerName => $entityManagerConfig) {
+            $entityManagerAlias = sprintf($entityManagerAliasTemplate, $entityManagerName);
+            $container->setAlias($entityManagerAlias, 'ucsf_ldap_orm_entity_manager');
+            $container
+                ->setDefinition($entityManagerAlias, new Definition(EntityManager::class))
+                ->setArguments([
+                    $connections[$entityManagerConfig['connection']],
+                    empty($entityManagerConfig['repositories']) ? [] : $entityManagerConfig['repositories'],
+                    empty($entityManagerConfig['commands']) ? [] : $entityManagerConfig['commands']
+                ]);
+        }
+
+        $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
+        $loader->load('services.yml');
+    }    
 }

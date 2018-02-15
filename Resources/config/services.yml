@@ -1,15 +1,11 @@
-# To avoid setting up your own testing parameters you can uncomment this. But you really should
-# put your own dev/test LDAP connection parameters in here and run the test.
-#
-#    ucsfldaporm_test:
-#        connection:
-#            uri: ldaps://somehost/somepath
-#            use_tls: false
-#            bind_dn: cn=Some Name
-#            password: aSecretWord
-#            password_type: plaintext
 services:
-    ucsf_ldap_orm.entity_manager:
-      class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
-      arguments: [ "@logger", "@annotation_reader", "%ucsfldaporm_test%" ]
+    ucsf_ldap_orm_entity_manager:
+      class: Ucsf\LdapOrmBundle\Doctrine\ORM\EntityManager
+      arguments:
+        - "%ucsf_ldap_orm%"
 
+
+parameters:
+    ucsf_ldap_orm_test_uri: ldap://ldap.forumsys.com:389
+    ucsf_ldap_orm_test_bind_dn: cn=read-only-admin,dc=example,dc=com
+    ucsf_ldap_orm_test_password: password
