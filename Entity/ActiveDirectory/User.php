@@ -436,6 +436,22 @@ class User extends OrganizationalPerson {
     public $accountExpires;
 
     /**
+     * @Attribute("lockoutDuration")
+     */
+    public $lockoutDuration;
+
+    /**
+     * @Attribute("lockoutTime")
+     */
+    public $lockoutTime;
+
+    /**
+     * @Attribute("lockoutThreshold")
+     */
+    public $lockoutThreshold;
+
+
+    /**
      * @param mixed $street
      */
     public function setStreet($street)
@@ -933,6 +949,56 @@ class User extends OrganizationalPerson {
         $this->msDsResultantPso = $msDsResultantPso;
     }
 
+    public function getLockoutDuration()
+    {
+        return $this->lockoutDuration;
+    }
+
+    public function setLockoutDuration($lockoutDuration)
+    {
+        $this->lockoutDuration = $lockoutDuration;
+    }
+
+    public function getLockoutTime()
+    {
+        return $this->lockoutTime;
+    }
+
+    public function setLockoutTime($lockoutTime)
+    {
+        $this->lockoutTime = $lockoutTime;
+    }
+
+    public function getLockoutThreshold()
+    {
+        return $this->lockoutThreshold;
+    }
+
+    public function setLockoutThreshold($lockoutThreshold)
+    {
+        $this->lockoutThreshold = $lockoutThreshold;
+    }
+
+
+
+    private $lockedOut = null;
+
+    public function setLockedOut($duration) {
+        // transform AD FileTime to seconds
+        $duration = $duration / -10000000;
+        $timeSinceLocked = (new \DateTime())->diff($this->lockoutTime)->format('%m');
+        $this->lockedOut = $timeSinceLocked < $duration;
+    }
+
+    /**
+     * @return mixed null = unknown, FALSE = unlocked, TRUE = locked
+     */
+    public function isLockedOut() {
+        return $this->lockedOut;
+    }
+
+
+
     /**
      * @return mixed
      */
@@ -977,9 +1043,11 @@ class User extends OrganizationalPerson {
                 }
             } else {
                 if ($this->pwdLastSet == 0) {
-                    $str = 'Never';
+                    $str = 'Password Change Required';
                 }
             }
+        } else {
+            $str = "Never!";
         }
         return $str;
     }
