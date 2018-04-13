@@ -984,10 +984,14 @@ class User extends OrganizationalPerson {
     private $lockedOut = null;
 
     public function setLockedOut($duration) {
-        // transform AD FileTime to seconds
-        $duration = $duration / -10000000;
-        $timeSinceLocked = (new \DateTime())->diff($this->lockoutTime)->format('%m');
-        $this->lockedOut = $timeSinceLocked < $duration;
+        if (empty($this->lockoutTime)) {
+            $this->lockedOut =  FALSE;
+        } else {
+            // transform AD FileTime to seconds
+            $duration = $duration / -10000000;
+            $timeSinceLocked = (new \DateTime())->diff($this->lockoutTime)->format('%m');
+            $this->lockedOut = $timeSinceLocked < $duration;
+        }
     }
 
     /**
