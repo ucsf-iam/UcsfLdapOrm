@@ -401,16 +401,16 @@ class LdapEntityManager
         }
 
         // test if entity already exists
-        if (!$originalEntity) {
+        if ($originalEntity == null) {
             $result = $this->entityExists($entity, false);
             $originalEntity = reset($result);
-            if($originalEntity == false) $originalEntity = null;
         }
-        if(count($originalEntity) > 0)
-        {
+
+        if ($originalEntity === FALSE) {
+            return $this->ldapPersist($dn, $entity);
+        } else {
             return $this->ldapUpdate($dn, $entity, $originalEntity);
         }
-        return $this->ldapPersist($dn, $entity);
     }
 
     /**
