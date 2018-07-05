@@ -17,9 +17,72 @@ class Domain extends LdapEntity
     const objectClass = 'domain';
 
     /**
+     * @Attribute("maxPwdAge")
+     */
+    public $maxPwdAge;
+
+    /**
+     * @Attribute("minPwdAge")
+     */
+    public $minPwdAge;
+
+    /**
+     * @Attribute("minPwdLength")
+     */
+    public $minPwdLength;
+
+    /**
      * @Attribute("lockoutDuration")
      */
     public $lockoutDuration;
+
+    /**
+     * @return mixed
+     */
+    public function getMaxPwdAge()
+    {
+        return $this->maxPwdAge;
+    }
+
+    /**
+     * @param mixed $maxPwdAge
+     */
+    public function setMaxPwdAge($maxPwdAge)
+    {
+        $this->maxPwdAge = $maxPwdAge;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getMinPwdAge()
+    {
+        return $this->minPwdAge;
+    }
+
+    /**
+     * @param mixed $minPwdAge
+     */
+    public function setMinPwdAge($minPwdAge)
+    {
+        $this->minPwdAge = $minPwdAge;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getMinPwdLength()
+    {
+        return $this->minPwdLength;
+    }
+
+    /**
+     * @param mixed $minPwdLength
+     */
+    public function setMinPwdLength($minPwdLength)
+    {
+        $this->minPwdLength = $minPwdLength;
+    }
 
     /**
      * @return mixed

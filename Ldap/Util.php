@@ -16,6 +16,7 @@ class Util
     // round((1970-1601)/4) = round(92.25) = 92
     const UNIX_EPOCH_DIFFERENCE = ((1970-1601) * 365 - 3 + 92 ) * 86400;
     const LDAP_DATETIME_FORMAT = 'YmdHis';
+    const AD_INT64_MIN_VALUE = -9223372036854775808;
 
     /**
      * Convert an LDAP timestamp to a PHP DateTime
