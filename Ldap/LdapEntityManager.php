@@ -123,7 +123,7 @@ class LdapEntityManager
             } catch (\Exception $e) {
                 $msg = $e->getMessage();
             }
-            if(!empty($bindResult)) {
+            if (!empty($bindResult)) {
                 break;
             } else {
                 $this->logger->warning('On try #'.$try.' cannot bind to LDAP server: ' . $this->uri . ' as ' . $this->bindDN. ' ' . $msg);
@@ -291,13 +291,13 @@ class LdapEntityManager
             }
         }
 
-        foreach($metadata->getMetadatas() as $attribute) {
+        foreach ($metadata->getMetadatas() as $attribute) {
             $getter = 'get' . ucfirst($metadata->getKey($attribute));
             $setter = 'set' . ucfirst($metadata->getKey($attribute));
 
             $value  = $entity->$getter();
-            if($value == null) {
-                if($metadata->isSequence($metadata->getKey($attribute))) {
+            if ($value == null) {
+                if ($metadata->isSequence($metadata->getKey($attribute))) {
 
 
                     $sequence = $this->twigRender(
@@ -310,15 +310,15 @@ class LdapEntityManager
                 }
             }
             // Specificity of ldap (incopatibility with ldap boolean)
-            if(is_bool($value)) {
-                if($value) {
+            if (is_bool($value)) {
+                if ($value) {
                     $value = "TRUE";
                 } else {
                     $value = "FALSE";
                 }
             }
 
-            if(is_object($value)) {
+            if (is_object($value)) {
                 if ($value instanceof \DateTime) {
                     $entry[$attribute] = Util::datetimeToAdDate($value);
                 }
@@ -328,13 +328,13 @@ class LdapEntityManager
                 else {
                     $entry[$attribute] = $this->buildEntityDn($value);
                 }
-            } elseif(is_array($value) && !empty($value) && isset($value[0]) && is_object($value[0])) {
+            } elseif (is_array($value) && !empty($value) && isset($value[0]) && is_object($value[0])) {
                 $valueArray = array();
-                foreach($value as $val) {
+                foreach ($value as $val) {
                     $valueArray[] = $this->buildEntityDn($val);
                 }
                 $entry[$attribute] = $valueArray;
-            } elseif(strtolower($attribute) == "userpassword") {
+            } elseif (strtolower($attribute) == "userpassword") {
                 if (is_array($value)) {
                     foreach ($value as $val) {
                         $needle = '{CLEAR}';
@@ -395,7 +395,7 @@ class LdapEntityManager
         }
 
         $dn = $entity->getDn();
-        if($dn == NULL) {
+        if ($dn == NULL) {
             $dn = $this->buildEntityDn($entity);
             $entity->setDn($dn);
         }
@@ -436,7 +436,7 @@ class LdapEntityManager
 
         $this->logger->debug('Delete (recursive=' . $recursive . ') in LDAP: ' . $dn );
 
-        if($recursive == false) {
+        if ($recursive == false) {
             return(ldap_delete($this->ldapResource, $dn));
         } else {
             //searching for sub entries
@@ -446,7 +446,7 @@ class LdapEntityManager
             for($i = 0; $i < $info['count']; $i++) {
                 //deleting recursively sub entries
                 $result=$this->deleteByDn($info[$i]['dn'], true);
-                if(!$result) {
+                if (!$result) {
                     //return result code, if delete fails
                     return($result);
                 }
@@ -473,7 +473,7 @@ class LdapEntityManager
     public function getRepository($entityName)
     {
         $metadata = $this->getClassMetadata($entityName);
-        if($metadata->getRepository()) {
+        if ($metadata->getRepository()) {
             $repository = $metadata->getRepository();
             return new $repository($this, $metadata);
         }
@@ -513,12 +513,8 @@ class LdapEntityManager
     {
         // Connect if needed
         $this->connect();
-
         $entry = $this->entityToEntry($entity);
-
         list($toInsert,) = $this->splitArrayForUpdate($entry);
-        //$operands = $this->getEntityOperands($entry);
-
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
         return ldap_add($this->ldapResource, $dn, $toInsert);
     }
@@ -533,7 +529,7 @@ class LdapEntityManager
         $originalEntry = $this->entityToEntry($original);
 
         // Do not attempt to modify operational attributes
-        foreach($operationalAttributes as $operationalAttributeName => $status) {
+        foreach ($operationalAttributes as $operationalAttributeName => $status) {
             if ($status) {
                 unset($modifiedEntry[$operationalAttributeName]);
             }
@@ -553,22 +549,20 @@ class LdapEntityManager
 
         // Inspect the state of each attribute and determinal if this is to be persisted as an attribute
         // modification, deletion or addition.
-        foreach($modifiedEntry as $attribute => $value) {
+        foreach ($modifiedEntry as $attribute => $value) {
             // Don't include attributes that haven't actually changed
             if ($value == $originalEntry[$attribute]) {
                 continue;
             }
             // If the modified value is empty, first make sure it was an attribute that was originall
             // retrieved. If so, set the delete operations to use the original value.
-            if (is_null($value) || (empty($value) && $value !== 0 &&  $value !== FALSE)) {
+            if (is_null($value) || (!is_array($value) && empty($value) && $value !== 0 &&  $value !== FALSE)) {
                 if (!in_array($attribute, $notRetrievedAttributes)) {
                     $operands[self::OPERAND_DEL][$attribute] = $originalEntry[$attribute];
                 }
                 // If modified is not the same value as the original, and it's not empty, if must be a real modify
             } else {
-                if (is_array($value)) {
-                    $value = $this->getEntityOperands($value)[self::OPERAND_MOD];
-                } elseif($value instanceof \Datetime) { // It shouldn't happen, but tests did reveal such cases
+                if ($value instanceof \Datetime) {
                     $value = new DateTimeDecorator($value);
                 }
                 $operands[self::OPERAND_MOD][$attribute] = $value;
@@ -608,10 +602,10 @@ class LdapEntityManager
             if (is_array($val)) {
                 list($val,) = $this->splitArrayForUpdate($val); // Multi-dimensional arrays are also fixed
             }
-            elseif(is_string($val)) {
+            elseif (is_string($val)) {
                 // $val = utf8_encode($val);
             }
-            elseif($val instanceof \Datetime) { // It shouldn't happen, but tests did reveal such cases
+            elseif ($val instanceof \Datetime) { // It shouldn't happen, but tests did reveal such cases
                 $val = new DateTimeDecorator($val);
             }
         }
@@ -766,7 +760,7 @@ class LdapEntityManager
         }
         $entities = array();
         foreach ($entries as $entry) {
-            if(is_array($entry)) {
+            if (is_array($entry)) {
                 $entity = $this->entryToEntity($entityName, $entry);
                 $entity->setNotRetrieveAttributes($notRetrieveAttributes);
                 $entities[] = $entity;
@@ -828,7 +822,7 @@ class LdapEntityManager
             );
             $infos = ldap_get_entries($this->ldapResource, $sr);
             foreach ($infos as $entry) {
-                if(is_array($entry)) {
+                if (is_array($entry)) {
                     $data[] = $this->entryToEntity($entityName, $entry);
                 }
             }
@@ -899,7 +893,7 @@ class LdapEntityManager
     public function cleanArray($array)
     {
         $newArray = array();
-        foreach(array_keys($array) as $key) {
+        foreach (array_keys($array) as $key) {
             $newArray[strtolower($key)] = $array[$key];
         }
 
@@ -927,18 +921,18 @@ class LdapEntityManager
         if (!empty($entryData['cn'][0])) {
             $entity->setCn($entryData['cn'][0]);
         }
-        foreach($metaDatas as $attrName => $attrValue) {
+        foreach ($metaDatas as $attrName => $attrValue) {
             $attrValue = strtolower($attrValue);
-            if($instanceMetadataCollection->isArrayOfLink($attrName))
+            if ($instanceMetadataCollection->isArrayOfLink($attrName))
             {
                 $entityArray = array();
-                if(!isset($entryData[$attrValue])) {
+                if (!isset($entryData[$attrValue])) {
                     $entryData[$attrValue] = array('count' => 0);
                 }
                 $linkArray = $entryData[$attrValue];
                 $count = $linkArray['count'];
                 for($i = 0; $i < $count; $i++) {
-                    if($linkArray[$i] != null) {
+                    if ($linkArray[$i] != null) {
                         $targetArray = $this->retrieveByDn($linkArray[$i], $instanceMetadataCollection->getArrayOfLinkClass($attrName), 1);
                         $entityArray[] = $targetArray[0];
                     }
@@ -951,7 +945,7 @@ class LdapEntityManager
                     continue; // Don't set the atribute if not exit
                 }
                 try {
-                    if(preg_match('/^\d{14}/', $entryData[$attrValue][0])) {
+                    if (preg_match('/^\d{14}/', $entryData[$attrValue][0])) {
                         if ($this->isActiveDirectory) {
                             $datetime = Util::adDateToDatetime($entryData[$attrValue][0]);
                         } else {
@@ -969,18 +963,18 @@ class LdapEntityManager
                 }
             }
         }
-        foreach($instanceMetadataCollection->getDnRegex() as $attrName => $regex) {
+        foreach ($instanceMetadataCollection->getDnRegex() as $attrName => $regex) {
             preg_match_all($regex, $entryData['dn'], $matches);
             $setter = 'set' . ucfirst($attrName);
             $entity->$setter($matches[1]);
         }
-        if($dn != '') {
+        if ($dn != '') {
             $entity->setDn($dn);
-            foreach($instanceMetadataCollection->getParentLink() as $attrName => $parentClass) {
+            foreach ($instanceMetadataCollection->getParentLink() as $attrName => $parentClass) {
                 $setter = 'set' . ucfirst($attrName);
                 $parentDn = preg_replace('/^[a-zA-Z0-9]*=[a-zA-Z0-9]*,/', '', $dn);
                 $link = $this->retrieveByDn($parentDn, $parentClass);
-                if(count($link) > 0) {
+                if (count($link) > 0) {
                     $entity->$setter($link[0]);
                 }
             }
