@@ -1,7 +1,7 @@
 {
     "name": "ucsf/ldaporm-bundle",
     "type": "symfony-bundle",
-    "description": "LDAP ORM for Symfony2",
+    "description": "LDAP ORM for Symfony 3",
     "keywords": ["ucsf", "orm", "ldap", "symfony"],
     "license": "MIT",
     "authors": [
