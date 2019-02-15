@@ -388,7 +388,7 @@ class LdapEntityManager
      * Persist an instance in Ldap
      * @param unknown_type $entity
      */
-    public function persist($entity, $checkMust = true, $originalEntity = null)
+    public function persist($entity, $checkMust = true, $originalEntity = null, $clearedAttributes = [])
     {
         if ($checkMust) {
             $this->checkMust($entity);
@@ -409,7 +409,7 @@ class LdapEntityManager
         if ($originalEntity === FALSE) {
             return $this->ldapPersist($dn, $entity);
         } else {
-            return $this->ldapUpdate($dn, $entity, $originalEntity);
+            return $this->ldapUpdate($dn, $entity, $originalEntity, $clearedAttributes);
         }
     }
 
@@ -620,12 +620,13 @@ class LdapEntityManager
      * @param LdapEntity $original
      * @throws Exception
      */
-    private function ldapUpdate($dn, LdapEntity $modified, LdapEntity $original)
+    private function ldapUpdate($dn, LdapEntity $modified, LdapEntity $original, $clearedAttributes = [])
     {
         $updated = FALSE;
         $this->connect();
 
         $notRetrievedAttributes = $modified->getNotRetrieveAttributes();
+        $notRetrievedAttributes = array_diff($notRetrievedAttributes, $clearedAttributes);
         $operationalAttributes = $this->getClassMetadata($modified)->getOperational();
         $operands = $this->getEntityOperands($original, $modified, $notRetrievedAttributes, $operationalAttributes);
 
