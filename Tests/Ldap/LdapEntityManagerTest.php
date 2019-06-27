@@ -22,4 +22,17 @@ class LdapEntityManagerTest extends DatabaseTestCase {
 
         $this->assertEquals($adTimestamp, $convertedAdTimestamp);
     }
+
+
+    public function testGroupAdd() {
+        $groupDn = 'CN=DualAuthUsersNet,OU=DualAuth,DC=net,DC=ucsf,DC=edu';
+        $memberDn = 'CN=Jason2 Gabler,OU=ReEnabled Users,DC=Campus,DC=net,DC=ucsf,DC=edu';
+
+        $domainEm = self::createService('myid_domain_entity_manager');
+        $campusEm = $domainEm->getEntityManagerByDomain('net.ucsf.edu');
+        $result = $campusEm->groupAdd($groupDn, $memberDn);
+
+
+    }
+
 }
