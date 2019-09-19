@@ -5,10 +5,12 @@ namespace Ucsf\LdapOrmBundle\Entity\Ldap;
 use Doctrine\ORM\Mapping as ORM;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
+use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
 
 /**
  * A superclass for GroupOfEntries and GroupOfNames
  * @author jgabler
+ * @ObjectClass("Group")
  */
 class Group extends LdapEntity {
 

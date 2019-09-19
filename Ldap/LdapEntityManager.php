@@ -1037,8 +1037,28 @@ class LdapEntityManager
             $err = ldap_error($this->ldapResource);
             throw new \Exception('Unable to add "'.$memberDn.'" to group "'.$groupDn.'"": '.$err);
         }
+        return $result;
     }
 
+
+
+    public function groupRemove($groupDn, $memberDn) {
+        $this->connect();
+
+        $groupInfo['member'] = $memberDn;
+        $result = @ldap_mod_del($this->ldapResource, $groupDn, $groupInfo);
+
+        if (!$result) {
+            $err = ldap_error($this->ldapResource);
+            // The err msg condition happens when the server would not remove the item from the group because it wasn't
+            // already present. This is not really an error, so only throw if the result is FALSE but the err msg is
+            // something else... likely more egregious.
+            if ($err != 'Server is unwilling to perform') {
+                throw new \Exception('Unable to remove "' . $memberDn . '" from group "' . $groupDn . '"": ' . $err);
+            }
+        }
+        return $result;
+    }
 }
 
 class MissingMustAttributeException extends \Exception {}

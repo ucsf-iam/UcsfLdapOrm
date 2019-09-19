@@ -99,9 +99,6 @@ class Domain extends LdapEntity
     {
         $this->lockoutDuration = $lockoutDuration;
     }
-
-
-
 }
 
 
