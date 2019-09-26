@@ -38,6 +38,7 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Sequence;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
 use Ucsf\LdapOrmBundle\Components\GenericIterator;
 use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
+use Ucsf\LdapOrmBundle\Entity\Ldap\Group;
 use Ucsf\LdapOrmBundle\Entity\Ldap\LdapEntity;
 use Ucsf\LdapOrmBundle\Ldap\Filter\LdapFilter;
 use Ucsf\LdapOrmBundle\Mapping\ClassMetaDataCollection;
@@ -746,6 +747,9 @@ class LdapEntityManager
         // Discern attributes to retrieve. If no attributes are supplied, get all the variables annotated
         // as LDAP attributes within the entity class
         $attributes = empty($options['attributes']) ? array_values($metaDatas) : $options['attributes'];
+        if (!is_array($attributes)) {
+            $attributes = [$attributes];
+        }
         // Always get MUST attributes because they might be needed later when persisting
         $attributes = array_values(array_unique(array_merge($attributes, array_keys(array_filter($mustAttributes)))));
         $notRetrieveAttributes = array_diff(array_values($metaDatas), $attributes);
@@ -1027,6 +1031,17 @@ class LdapEntityManager
         return TRUE;
     }
 
+    /**
+     * Add an object to a group. If the object was successfully added or if the object was already a member of the group
+     * consider both circumstances are being successfully added.  (Note that PHP's ldap_mod_add() returns FALSE when
+     * an add attempt is made and the object is already in the group. Unfortunately, PHP's documentation is ambiguous
+     * regarding under what circumstances the FALSE is returned, so all of this extra code to find out the resulting
+     * state of the object and the group when ldap_mod_add() returns FALSE is for combining those two "successful cases.)
+     * @param $groupDn The distinguished name of the group to add the object to
+     * @param $memberDn The distinguished name of the object to add to the group
+     * @return bool Returns TRUE when the object is successfully added to the group or was already a member.
+     * @throws \Ucsf\LdapOrmBundle\Exception\Filter\InvalidLdapFilterException
+     */
     public function groupAdd($groupDn, $memberDn) {
         $this->connect();
 
@@ -1034,8 +1049,32 @@ class LdapEntityManager
         $result = @ldap_mod_add($this->ldapResource, $groupDn, $groupInfo);
 
         if (!$result) {
-            $err = ldap_error($this->ldapResource);
-            throw new \Exception('Unable to add "'.$memberDn.'" to group "'.$groupDn.'"": '.$err);
+            // The FALSE result might be because the user is already in the group. Check to see if it is in the group
+            // despite this result from ldap_mod_add(). This attempts to retrieve the object for adding by looking
+            // for this object as though it had a memberOf attribute value of the group in question.
+            $memberRdns = ldap_explode_dn($memberDn, 1);
+            $searchDn = preg_replace('/^.*?dc=/i', 'dc=', $memberDn);
+            $ldapFilter = new LdapFilter(
+                [
+                    '&' => [
+                        'cn' => $memberRdns[0],
+                        'memberOf' => $groupDn
+                    ]
+                ],
+                $this->isActiveDirectory
+            );
+            $rawResult = $this->doRawLdapSearch($ldapFilter->format(), ['member'], null, $searchDn );
+            $entries = ldap_get_entries($this->ldapResource, $rawResult);
+
+            // If the object was not found as part of the group, and we've already received a FALSE from ldap_mod_add(),
+            // then we have a real problem. Otherwise, if the object was found we know it's already a group member
+            // and return TRUE
+            if ($entries['count'] < 1) {
+                $err = ldap_error($this->ldapResource);
+                throw new \Exception('Unable to add "' . $memberDn . '" to group "' . $groupDn . '"": ' . $err);
+            } else {
+                $result = TRUE;
+            }
         }
         return $result;
     }
