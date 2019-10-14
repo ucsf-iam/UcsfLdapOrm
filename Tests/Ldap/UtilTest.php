@@ -10,17 +10,18 @@ namespace Ucsf\LdapOrmBundle\Tests\Ldap;
 
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Bundle\FrameworkBundle\Tests\TestCase;
 use Ucsf\LdapOrmBundle\Ldap\Util;
 
 
-class UtilTest extends WebTestCase
+class UtilTest extends TestCase
 {
 
     // Generated from https://www.epochconverter.com/ldap
-    const AD_TEST_TIME_GMT = 'July 25, 2017 2:48:05.480000 AM';
-    const AD_TEST_TIME_PDT = 'July 24, 2017 7:48:05.480000 PM';
+    const AD_TEST_TIME_GMT = 'July 25, 2017 2:48:05.000000 AM';
+    const AD_TEST_TIME_PDT = 'July 24, 2017 7:48:05.000000 PM';
     const AD_TEST_TIME_FORMAT = 'F j, Y g:i:s.u A';
-    const AD_TEST_TIMESTAMP = '131454244854800000';
+    const AD_TEST_TIMESTAMP = '131454244850000000';
     const AD_TEST_UNIXEPOCH = '1500950885';
 
     const LDAP_TEST_TIME = 'July 25, 2017 2:48:05 AM'; // GMT
@@ -42,13 +43,13 @@ class UtilTest extends WebTestCase
 
     public function testAdDateToDatetime() {
         $adDateTime = Util::adDateToDatetime(self::AD_TEST_TIMESTAMP);
-        $this->assertEquals(self::AD_TEST_TIME_PDT, $adDateTime->format(self::AD_TEST_TIME_FORMAT));
+        $this->assertEquals(self::AD_TEST_TIME_GMT, $adDateTime->format(self::AD_TEST_TIME_FORMAT));
         $this->assertEquals(self::AD_TEST_UNIXEPOCH, $adDateTime->format('U'));
     }
     
 
     public function testDatetimeToAdDate() {
-        $adDate = Util::datetimeToAdDate(\DateTime::createFromFormat(self::AD_TEST_TIME_FORMAT, self::AD_TEST_TIME_PDT));
+        $adDate = Util::datetimeToAdDate(\DateTime::createFromFormat(self::AD_TEST_TIME_FORMAT, self::AD_TEST_TIME_GMT));
         $this->assertEquals(self::AD_TEST_TIMESTAMP, $adDate);
     }
 

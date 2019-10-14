@@ -2,10 +2,11 @@
 
 namespace Ucsf\LdapOrmBundle\Tests;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
-abstract class DatabaseTestCase extends \PHPUnit_Framework_TestCase
+abstract class DatabaseTestCase extends TestCase
 {
     static protected $class;
     static protected $kernel;

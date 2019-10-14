@@ -8,8 +8,6 @@
 
 namespace Ucsf\LdapOrmBundle\Tests\Ldap;
 
-
-use Ucsf\LdapOrmBundle\Entity\Ldap\OrganizationalPerson;
 use Ucsf\LdapOrmBundle\Ldap\Converter;
 use Ucsf\LdapOrmBundle\Tests\DatabaseTestCase;
 
@@ -24,15 +22,16 @@ class LdapEntityManagerTest extends DatabaseTestCase {
     }
 
 
-    public function testGroupAdd() {
+    public function testGroupRemoveAndAdd() {
         $groupDn = 'CN=DualAuthUsersNet,OU=DualAuth,DC=net,DC=ucsf,DC=edu';
-        $memberDn = 'CN=Jason2 Gabler,OU=ReEnabled Users,DC=Campus,DC=net,DC=ucsf,DC=edu';
+        $memberDn = 'CN=Madrigal\, Melchor,OU=UCSF,DC=Campus,DC=net,DC=ucsf,DC=edu';
 
-        $domainEm = self::createService('myid_domain_entity_manager');
-        $campusEm = $domainEm->getEntityManagerByDomain('net.ucsf.edu');
-        $result = $campusEm->groupAdd($groupDn, $memberDn);
-
-
+        $domainEm = self::createService('domain_entity_manager')->getEntityManagerByDomain(\IAM\DirectoryServicesBundle\Util\AD::DOMAIN_NET);
+        $domainEm->groupRemove($groupDn, $memberDn); // Don't care about result, just prepping for the add
+        $result = $domainEm->groupAdd($groupDn, $memberDn);
+        $this->assertTrue($result);
+        $domainEm->groupRemove($groupDn, $memberDn);
+        $this->assertTrue($result);
     }
 
 }
