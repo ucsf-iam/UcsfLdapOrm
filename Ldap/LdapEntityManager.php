@@ -516,6 +516,7 @@ class LdapEntityManager
         $this->connect();
         $entry = $this->entityToEntry($entity);
         list($toInsert,) = $this->splitArrayForUpdate($entry);
+        unset($toInsert['dn']);
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
         return ldap_add($this->ldapResource, $dn, $toInsert);
     }
