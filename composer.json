@@ -11,7 +11,7 @@
         }
     ],
     "require": {
-        "php": "php": "^7.0.8",
+        "php": "^7.0.8",
         "symfony/framework-bundle": "3.4.*"
     },
     "autoload": {
