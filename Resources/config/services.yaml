@@ -1,0 +1,14 @@
+parameters:
+  ucsf_ldap_orm.forumsys_test_server:
+      uri: ldap://ldap.forumsys.com
+      use_tls: false
+      bind_dn: "cn=read-only-admin,dc=example,dc=com"
+      password: "password"
+      password_type: plaintext
+
+
+services:
+  ucsf_ldap_orm.forumsys_entity_manager:
+    class: Ucsf\LdapOrmBundle\Ldap\LdapEntityManager
+    arguments: [ "@logger", "@annotation_reader", "@twig", "%ucsf_ldap_orm.forumsys_test_server%" ]
+    public: true
