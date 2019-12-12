@@ -73,6 +73,16 @@ class LdapEntityManager
 
     /**
      * LdapEntityManager constructor.
+     *
+     * The $options array can contain the following indexes, otherwise these are the defaults:
+     *  uri: <required, no default>
+     *  bind_dn: <required, no default>
+     *  password: <required, no default>
+     *  password_type: "plaintext" (string)
+     *  use_tls: FALSE (boolean)
+     *  active_directory:  FALSE (boolean)
+     *
+     *
      * @param Logger $logger
      * @param \Twig_Environment $twig
      * @param Reader $reader
@@ -80,19 +90,31 @@ class LdapEntityManager
      */
     public function __construct(Logger $logger, Reader $reader, Environment $twig, array $config=null)
     {
-        if ($config == null) {
-            thrown \Exception('LdapEntityManager has no config to work with. What should I connect to?');
+        if (empty($config)) {
+            thrown \Exception('LdapEntityManager has no config to work with. See comments on LdapEntityManager::__construct().');
+        }
+
+        if (empty($config['uri'])) {
+            thrown \Exception('LdapEntityManager has no "uri" configured. What should I connect to?');
+        }
+
+        if (empty($config['bind_dn'])) {
+            thrown \Exception('LdapEntityManager has no "bind_dn" configured. Who should I connect as?');
+        }
+
+        if (empty($config['password'])) {
+            thrown \Exception('LdapEntityManager has no "password" configured. Please configure with a bind_dn and password.');
         }
 
         $this->logger     	        = $logger;
+        $this->reader     	        = $reader;
         $this->twig                 = $twig;
         $this->uri        	        = $config['uri'];
         $this->bindDN     	        = $config['bind_dn'];
         $this->password   	        = $config['password'];
-        $this->passwordType         = $config['password_type'];
-        $this->useTLS     	        = $config['use_tls'];
-        $this->isActiveDirectory    = !empty($config['active_directory']);
-        $this->reader     	        = $reader;
+        $this->passwordType         = empty($config['password_type']) ? 'plaintext' : $config['password_type'];
+        $this->useTLS     	        = empty($config['use_tls']) ? FALSE : $config['use_tls'];
+        $this->isActiveDirectory    = empty($config['active_directory']) ? FALSE : $config['active_directory'];
     }
 
     /**
