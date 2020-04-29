@@ -104,6 +104,20 @@ class User extends OrganizationalPerson {
     }
 
 
+    /**
+     * @return bool TRUE if user is active according to UCSF rules
+     */
+    public function isActive() {
+        return in_array(intval($this->userAccountControl), [
+            self::ADS_UF_NORMAL_ACCOUNT, // 512
+            self::ADS_UF_NORMAL_ACCOUNT + self::ADS_UF_PASSWD_NOTREQD, // 544
+            self::ADS_UF_NORMAL_ACCOUNT + self::ADS_UF_DONT_EXPIRE_PASSWD, // 66048
+            self::ADS_UF_NORMAL_ACCOUNT + self::ADS_UF_SMARTCARD_REQUIRED, // 262656
+        ]);
+    }
+
+
+
     public function getDomain() {
         if (!$this->domain) {
             $domain = null;
