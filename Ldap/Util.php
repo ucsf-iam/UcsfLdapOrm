@@ -17,6 +17,7 @@ class Util
     // epoch. Subtract 1970 - 1601 for 369 years. But this is needed in seconds and leap days need to be accounted for.
     // So, that's 369 /4 leap , for 92.25 leap days, rounding down to 92. However, 1700, 1800 and 1900 are not leap
     // years. So that's 92 - 3. Al together that's ((1970-1601) * 365 - 3 + 92 ) * 86,400 seconds per day
+    // const UNIX_EPOCH_DIFFERENCE = ((1970-1601) * 365 - 3 + 92 ) * 86400;
     const UNIX_EPOCH_DIFFERENCE = 11644473600;
     const LDAP_DATETIME_FORMAT = 'YmdHis';
     const AD_INT64_MIN_VALUE = -9223372036854775808;

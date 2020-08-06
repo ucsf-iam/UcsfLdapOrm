@@ -22,7 +22,7 @@
 namespace Ucsf\LdapOrmBundle\Ldap;
 
 use Doctrine\Common\Annotations\Reader;
-use Symfony\Component\Console\Output\ConsoleOutput;
+use Twig\Environment;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Dn;
@@ -38,7 +38,6 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Sequence;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
 use Ucsf\LdapOrmBundle\Components\GenericIterator;
 use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
-use Ucsf\LdapOrmBundle\Entity\Ldap\Group;
 use Ucsf\LdapOrmBundle\Entity\Ldap\LdapEntity;
 use Ucsf\LdapOrmBundle\Ldap\Filter\LdapFilter;
 use Ucsf\LdapOrmBundle\Mapping\ClassMetaDataCollection;
@@ -74,22 +73,48 @@ class LdapEntityManager
 
     /**
      * LdapEntityManager constructor.
+     *
+     * The $options array can contain the following indexes, otherwise these are the defaults:
+     *  uri: <required, no default>
+     *  bind_dn: <required, no default>
+     *  password: <required, no default>
+     *  password_type: "plaintext" (string)
+     *  use_tls: FALSE (boolean)
+     *  active_directory:  FALSE (boolean)
+     *
+     *
      * @param Logger $logger
      * @param \Twig_Environment $twig
      * @param Reader $reader
      * @param $config
      */
-    public function __construct(Logger $logger, Reader $reader, $config)
+    public function __construct(Logger $logger, Reader $reader, Environment $twig, array $config=null)
     {
+        if (empty($config)) {
+            thrown \Exception('LdapEntityManager has no config to work with. See comments on LdapEntityManager::__construct().');
+        }
+
+        if (empty($config['uri'])) {
+            thrown \Exception('LdapEntityManager has no "uri" configured. What should I connect to?');
+        }
+
+        if (empty($config['bind_dn'])) {
+            thrown \Exception('LdapEntityManager has no "bind_dn" configured. Who should I connect as?');
+        }
+
+        if (empty($config['password'])) {
+            thrown \Exception('LdapEntityManager has no "password" configured. Please configure with a bind_dn and password.');
+        }
+
         $this->logger     	        = $logger;
-        $this->twig                 = new \Twig_Environment(new \Twig_Loader_Array());
+        $this->reader     	        = $reader;
+        $this->twig                 = $twig;
         $this->uri        	        = $config['uri'];
         $this->bindDN     	        = $config['bind_dn'];
         $this->password   	        = $config['password'];
-        $this->passwordType         = $config['password_type'];
-        $this->useTLS     	        = $config['use_tls'];
-        $this->isActiveDirectory    = !empty($config['active_directory']);
-        $this->reader     	        = $reader;
+        $this->passwordType         = empty($config['password_type']) ? 'plaintext' : $config['password_type'];
+        $this->useTLS     	        = empty($config['use_tls']) ? FALSE : $config['use_tls'];
+        $this->isActiveDirectory    = empty($config['active_directory']) ? FALSE : $config['active_directory'];
     }
 
     /**
@@ -117,7 +142,8 @@ class LdapEntityManager
             $this->logger->debug('TLS enabled for LDAP connection.');
         }
 
-        for ($try=1; $try<=3; $try++) {
+        // Give 3 tries to connect
+        for ($try=1; $try<4; $try++) {
             $msg = '';
             try {
                 $bindResult = ldap_bind($this->ldapResource, $this->bindDN, $this->password);
@@ -136,7 +162,6 @@ class LdapEntityManager
             throw new \Exception('Cannot bind to LDAP server: ' . $this->uri . ' as ' . $this->bindDN);
         }
 
-
         $this->logger->debug('Connected to LDAP server: ' . $this->uri . ' as ' . $this->bindDN . ' .');
 
         return $bindResult;
@@ -145,6 +170,7 @@ class LdapEntityManager
     /**
      * Find if an entity exists in LDAP without doing an LDAP search that generates
      * warnings regarding an non-existant DN if turns out that the entity does not exist.
+     *
      * @param $entity The entity to check for existance. Entity must have all MAY attributes.
      * @return bool Returns true if the given entity exists in LDAP
      * @throws MissingEntityManagerException
@@ -172,6 +198,14 @@ class LdapEntityManager
         }
     }
 
+    /**
+     * Get the unique identifier value from the attribute describes in the entity's @UniqueIdentifier() annotation.
+     *
+     * @param LdapEntity $entity
+     * @param bool $throwExceptions
+     * @return array
+     * @throws \Exception
+     */
     public function getUniqueIdentifier(LdapEntity $entity, $throwExceptions = TRUE) {
         $entityClass = get_class($entity);
         $meta = $this->getClassMetadata($entityClass);
@@ -196,12 +230,13 @@ class LdapEntityManager
         ];
     }
 
+
     /**
      * Return the class metadata instance
      *
      * @param string $entityName
-     *
      * @return ClassMetaDataCollection
+     * @throws \ReflectionException
      */
     public function getClassMetadata($entityName)
     {
@@ -268,12 +303,13 @@ class LdapEntityManager
         return $instanceMetadataCollection;
     }
 
+
     /**
-     * Convert an entity to array using annotation reader
+     * Convert an entity to a PHP OpenLdap array data structure.
      *
      * @param LdapEntity $entity
-     *
-     * @return array
+     * @return array A PHP OpenLdap array data structure
+     * @throws \ReflectionException
      */
     public function entityToEntry(LdapEntity $entity)
     {
@@ -310,7 +346,8 @@ class LdapEntityManager
                     $entity->$setter($value);
                 }
             }
-            // Specificity of ldap (incopatibility with ldap boolean)
+
+            // Ldap doesn't have so many boolean-esque types like PHP, so convert to "TRUE" or "FALSE".
             if (is_bool($value)) {
                 if ($value) {
                     $value = "TRUE";
@@ -358,17 +395,14 @@ class LdapEntityManager
     /**
      * Build a DN for an entity with the use of dn annotation
      *
-     * @param unknown_type $instance
-     *
-     * @return string
+     * @param $instance An instance of LdapEntity (or sub-class)
+     * @return bool|null|string
+     * @throws \ReflectionException
      */
-    public function buildEntityDn($instance)
+    public function buildEntityDn(LdapEntity $instance)
     {
         $instanceClassName = get_class($instance);
-        $arrayInstance=array();
-
         $r = new \ReflectionClass($instanceClassName);
-        $instanceMetadataCollection = new ClassMetaDataCollection();
         $classAnnotations = $this->reader->getClassAnnotations($r);
 
         $dnModel = '';
@@ -516,7 +550,7 @@ class LdapEntityManager
         $this->connect();
         $entry = $this->entityToEntry($entity);
         list($toInsert,) = $this->splitArrayForUpdate($entry);
-        unset($toInsert['dn']);
+        // unset($toInsert['dn']);
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
         return ldap_add($this->ldapResource, $dn, $toInsert);
     }

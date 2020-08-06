@@ -9,7 +9,7 @@
 namespace Ucsf\LdapOrmBundle\Tests\Ldap;
 
 
-use Symfony\Bundle\FrameworkBundle\Tests\Functional\WebTestCase;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Ucsf\LdapOrmBundle\Entity\ActiveDirectory\User;
 
 class AdEntityTests extends WebTestCase

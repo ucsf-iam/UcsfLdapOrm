@@ -17,8 +17,20 @@ class Configuration implements ConfigurationInterface
      */
     public function getConfigTreeBuilder()
     {
-        $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('ucsf_ldap_orm');
+        $treeBuilder = new TreeBuilder('ucsf_ldap_orm');
+
+        $treeBuilder->getRootNode()
+            ->useAttributeAsKey(true)->prototype('array')
+            ->children()
+            ->scalarNode('uri')->isRequired()->cannotBeEmpty()->end()
+            ->booleanNode('use_tls')->defaultFalse()->end()
+            ->scalarNode('bind_dn')->isRequired()->cannotBeEmpty()->end()
+            ->scalarNode('password')->isRequired()->cannotBeEmpty()->end()
+            ->scalarNode('password_type')->isRequired()->cannotBeEmpty()->end()
+            ->scalarNode('active_directory')->end()
+            ->scalarNode('domain')->cannotBeEmpty()->end()
+            ->end()
+            ->end();
 
         return $treeBuilder;
     }

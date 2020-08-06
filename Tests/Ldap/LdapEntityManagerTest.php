@@ -8,30 +8,37 @@
 
 namespace Ucsf\LdapOrmBundle\Tests\Ldap;
 
-use Ucsf\LdapOrmBundle\Ldap\Converter;
-use Ucsf\LdapOrmBundle\Tests\DatabaseTestCase;
 
-class LdapEntityManagerTest extends DatabaseTestCase {
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Ucsf\LdapOrmBundle\Entity\Ldap\Person;
 
-    public function testAdDateConversion() {
-        $adTimestamp = '130898490540000000.0Z';
-        $decorator = Converter::fromAdDateTime($adTimestamp);
-        $convertedAdTimestamp = Converter::toAdDateTime($decorator);
+class LdapEntityManagerTest extends WebTestCase {
 
-        $this->assertEquals($adTimestamp, $convertedAdTimestamp);
+    static protected $container;
+
+
+    protected function setUp()
+    {
+        static::$container = static::bootKernel()->getContainer();
     }
 
+    public function testRetrieve() {
+        $em = static::$container->get('ucsf_ldap_orm.forumsys_entity_manager');
+        $result = $em->retrieve(Person::class,[
+            'filter' => '(sn=Gauss)',
+            'searchDn' => 'dc=example,dc=com'
+        ]);
 
-    public function testGroupRemoveAndAdd() {
-        $groupDn = 'CN=DualAuthUsersNet,OU=DualAuth,DC=net,DC=ucsf,DC=edu';
-        $memberDn = 'CN=Madrigal\, Melchor,OU=UCSF,DC=Campus,DC=net,DC=ucsf,DC=edu';
+        $this->assertCount(1, $result);
+        $this->assertTrue(is_a($result[0],Person::class));
+        $this->assertEquals('Carl Friedrich Gauss', $result[0]->getCn());
 
-        $domainEm = self::createService('domain_entity_manager')->getEntityManagerByDomain(\IAM\DirectoryServicesBundle\Util\AD::DOMAIN_NET);
-        $domainEm->groupRemove($groupDn, $memberDn); // Don't care about result, just prepping for the add
-        $result = $domainEm->groupAdd($groupDn, $memberDn);
-        $this->assertTrue($result);
-        $domainEm->groupRemove($groupDn, $memberDn);
-        $this->assertTrue($result);
+        $result = $em->retrieve(Person::class,[
+            'filter' => '(sn=Gauss)',
+            'searchDn' => 'ou=scientists, dc=example,dc=com'
+        ]);
+
+        $this->assertCount(0, $result);
     }
 
 }
