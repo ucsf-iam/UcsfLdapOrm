@@ -1,6 +1,14 @@
 # UcsfLdapOrm
 
-A Symfony bundle that provides ORM over LDAP.
+A Symfony bundle that provides an ORM for LDAP.
+
+Oct 1, 2020. It's been quite a while that UcsfLdapOrm has been stuck at Symfony 3.3 compatibiliy, but that is about to change. I am finally in the process of upgrading and moving directly to Symfony 5.whatever the latest minor version maybe at the time you are reading this. 
+
+The initial effort has been to conform to all things Symfony 5, including the most recent version of Doctrine that it uses. The new version is currently on the "v5" branch and will have a new 5.x.x version -- a 2 major version jump. This is largely an attempt to keep the bundle's major version in step with Symfony's.  After this initial push, and perhaps somewhat during, I'll be cleaning things up and doing some reorganizing and refactoring. While the first years of life for this bundle were spent enhancing Mathieu Goulin's original code without wanting to get into the business of a full on refactoring, the time has come for a change.
+
+My goal is to have 5.1.0 ready and merged into master by Christmas 2020.
+
+The original README:
 
 This code was originally based upon <a href="https://github.com/matgou">Mathieu Goulin</a>'s <a href="https://github.com/matgou/GorgLdapOrmBundle">GorgLdapOrmBundle</a>. We are forever indebted to him for providing an excellent base for the work we've continued at UCSF IT Identity & Access Management. Originally we forked GorgLdapOrmBundle but, as our development continued to diverge and added new functionality, we came to the point where it was time to strike out on our own. The UcsfLdapOrm repo was created as that fresh start.
 
