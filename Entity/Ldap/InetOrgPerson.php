@@ -12,7 +12,7 @@ use IAM\DirectoryServicesBundle\Util\Phone;
  * Standard LDAP InetOrgPerson. May be used as a Symfony user.
  * 
  * @author jgabler
- * @ObjectClass("OrganizationalPerson")
+ * @ObjectClass("InetOrgPerson")
  */
 class InetOrgPerson extends OrganizationalPerson
 {

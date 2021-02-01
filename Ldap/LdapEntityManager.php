@@ -304,6 +304,39 @@ class LdapEntityManager
     }
 
 
+    public function entityToLdif(LdapEntity $entity) {
+        $entityName = get_class($entity);
+        $metadata = $this->getClassMetadata($entityName);
+
+        $objectClasses = '';
+        $ldif = '';
+        foreach($metadata->getMetadatas() as $name) {
+            $getter = 'get'.$name;
+
+
+            $finalVal = '';
+            if ($val = $entity->$getter()) {
+                if (is_array($val)) {
+                    foreach ($val as $subval) {
+                        $finalVal .= $name . ': ' . $subval . "\n";
+                    }
+                } else {
+                    $finalVal .= $name . ': ' . $val . "\n";
+                }
+            }
+            if (strtolower($name) == 'objectclass') {
+                $objectClasses .= $finalVal;
+            } else {
+                $ldif .= $finalVal;
+            }
+        }
+
+        $ldif = "version:1 \n\n".$objectClasses.$ldif;
+
+        $x = 1;
+    }
+
+
     /**
      * Convert an entity to a PHP OpenLdap array data structure.
      *
@@ -546,11 +579,11 @@ class LdapEntityManager
      */
     private function ldapPersist($dn, LdapEntity $entity)
     {
-        // Connect if needed
         $this->connect();
         $entry = $this->entityToEntry($entity);
         list($toInsert,) = $this->splitArrayForUpdate($entry);
-        // unset($toInsert['dn']);
+        // The dn is already specific in the ldap_add() call. Keeping it in $toInsert will cause an Object Class Violation.
+        unset($toInsert['dn']);
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
         return ldap_add($this->ldapResource, $dn, $toInsert);
     }
@@ -914,7 +947,8 @@ class LdapEntityManager
             $searchDN,
             $rawFilter,
             $attributes,
-            0);
+            0,
+            $count);
     }
 
     /**

@@ -21,7 +21,7 @@ class LdapEntity implements \JsonSerializable {
      * LdapEntity constructor.
      */
     public function __construct() {
-        $this->setObjectClass(lcfirst((new \ReflectionClass(get_class($this)))->getShortName()));
+        $this->setObjectClass();
     }
 
     
@@ -146,8 +146,22 @@ class LdapEntity implements \JsonSerializable {
         return $this->objectClass;
     }
 
-    public function setObjectClass($objectClasses) {
-        $this->objectClass = $objectClasses;
+
+    /**
+     * @param null $objectClass
+     * @throws \ReflectionException
+     */
+    public function setObjectClass($objectClass = null) {
+        if ($objectClass == null) {
+            $this->objectClass = ['top'];
+            $ref = new \ReflectionClass(get_class($this));
+            while ($ref && $parentRef = $ref->getParentClass()) {
+                $this->objectClass[] = lcfirst($ref->getShortName());
+                $ref = $parentRef;
+            }
+        } else {
+            $this->objectClass = $objectClass;
+        }
     }
 
     function getCn() {
@@ -219,7 +233,5 @@ class LdapEntity implements \JsonSerializable {
     {
         $this->whenCreated = $whenCreated;
     }
-
-
 
 }
