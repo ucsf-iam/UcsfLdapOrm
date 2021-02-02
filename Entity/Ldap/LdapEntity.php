@@ -15,7 +15,7 @@ class LdapEntity implements \JsonSerializable {
      * A list of attributes which were already empty when the entry was first retrieve.
      * @var $notRetrieveAttributes
      */
-    protected $notRetrieveAttributes;
+    protected $notRetrieveAttributes = [];
 
     /**
      * LdapEntity constructor.
