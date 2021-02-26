@@ -52,7 +52,7 @@ use Symfony\Bridge\Monolog\Logger;
  */
 class LdapEntityManager
 {
-    const DEFAULT_MAX_RESULT_COUNT      = 100;
+    const DEFAULT_MAX_RESULT_COUNT      = 20000;
     const OPERAND_ADD = 'add';
     const OPERAND_MOD = 'mod';
     const OPERAND_DEL = 'del';
