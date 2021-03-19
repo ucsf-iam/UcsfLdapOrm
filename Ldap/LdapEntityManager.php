@@ -26,13 +26,9 @@ use Twig\Environment;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Dn;
-use Ucsf\LdapOrmBundle\Annotation\Ldap\DnLinkArray;
-use Ucsf\LdapOrmBundle\Annotation\Ldap\DnPregMatch;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Must;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
-use Ucsf\LdapOrmBundle\Annotation\Ldap\ParentDn;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Repository as RepositoryAttribute;
-use Ucsf\LdapOrmBundle\Annotation\Ldap\SearchDn;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Operational;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Sequence;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
@@ -57,19 +53,19 @@ class LdapEntityManager
     const OPERAND_MOD = 'mod';
     const OPERAND_DEL = 'del';
 
-    private $uri        	= "";
-    private $bindDN     	= "";
-    private $password   	= "";
-    private $passwordType 	= "";
-    private $useTLS     	= FALSE;
-    private $isActiveDirectory = FALSE;
+    protected $uri        	= "";
+    protected $bindDN     	= "";
+    protected $password   	= "";
+    protected $passwordType 	= "";
+    protected $useTLS     	= FALSE;
+    protected $isActiveDirectory = FALSE;
 
-    private $ldapResource;
-    private $pageCookie 	= "";
-    private $pageMore    	= FALSE;
-    private $reader;
+    protected $ldapResource;
+    protected $pageCookie 	= "";
+    protected $pageMore    	= FALSE;
+    protected $reader;
 
-    private $iterator = Null;
+    protected $iterator = Null;
 
     /**
      * LdapEntityManager constructor.
@@ -88,41 +84,31 @@ class LdapEntityManager
      * @param Reader $reader
      * @param $config
      */
-    public function __construct(Logger $logger, Reader $reader, Environment $twig, array $config=null)
+    public function __construct(Logger $logger, Reader $reader, Environment $twig, array $config=[])
     {
-        if (empty($config)) {
-            thrown \Exception('LdapEntityManager has no config to work with. See comments on LdapEntityManager::__construct().');
-        }
-
-        if (empty($config['uri'])) {
-            thrown \Exception('LdapEntityManager has no "uri" configured. What should I connect to?');
-        }
-
-        if (empty($config['bind_dn'])) {
-            thrown \Exception('LdapEntityManager has no "bind_dn" configured. Who should I connect as?');
-        }
-
-        if (empty($config['password'])) {
-            thrown \Exception('LdapEntityManager has no "password" configured. Please configure with a bind_dn and password.');
-        }
-
         $this->logger     	        = $logger;
         $this->reader     	        = $reader;
         $this->twig                 = $twig;
-        $this->uri        	        = $config['uri'];
-        $this->bindDN     	        = $config['bind_dn'];
-        $this->password   	        = $config['password'];
-        $this->passwordType         = empty($config['password_type']) ? 'plaintext' : $config['password_type'];
-        $this->useTLS     	        = empty($config['use_tls']) ? FALSE : $config['use_tls'];
-        $this->isActiveDirectory    = empty($config['active_directory']) ? FALSE : $config['active_directory'];
+        $this->setConfig($config);
     }
+
+
+    public function setConfig(array $config) {
+        $this->uri        	        = $config['uri'] ?? null;
+        $this->bindDN     	        = $config['bind_dn'] ?? null;
+        $this->password   	        = $config['password'] ?? null;
+        $this->passwordType         = $config['password_type'] ?? 'plaintext';
+        $this->useTLS     	        = $config['use_tls'] ?? false;
+        $this->isActiveDirectory    = $config['active_directory'] ?? false;
+    }
+
 
     /**
      * Connect to LDAP service
      *
      * @return LDAP resource
      */
-    private function connect()
+    protected function connect()
     {
         // Don't permit multiple connect() calls to run
         if ($this->ldapResource) {
@@ -173,17 +159,12 @@ class LdapEntityManager
      *
      * @param $entity The entity to check for existance. Entity must have all MAY attributes.
      * @return bool Returns true if the given entity exists in LDAP
-     * @throws MissingEntityManagerException
      */
     public function entityExists($entity, $checkOnly = true) {
         $this->checkMust($entity);
         $entityClass = get_class($entity);
-        $meta = $this->getClassMetadata($entityClass);
 
-        $searchDn = $meta->getSearchDn();
-        if (!$searchDn && $this->isActiveDirectory) {
-            $searchDn = LdapEntity::getBaseDnFromDn($entity->getDn());
-        }
+        $searchDn = LdapEntity::getBaseDnFromDn($entity->getDn());
         $uniqueIdentifier = $this->getUniqueIdentifier($entity);
 
         $entities = $this->retrieve($entityClass, [
@@ -252,9 +233,6 @@ class LdapEntityManager
             if ($classAnnotation instanceof ObjectClass) {
                 $instanceMetadataCollection->setObjectClass($classAnnotation->getValue());
             }
-            if ($classAnnotation instanceof SearchDn) {
-                $instanceMetadataCollection->setSearchDn($classAnnotation->getValue());
-            }
             if ($classAnnotation instanceof Dn) {
                 $instanceMetadataCollection->setDn($classAnnotation->getValue());
             }
@@ -272,21 +250,9 @@ class LdapEntityManager
                     $attribute=$annotation->getName();
                     $instanceMetadataCollection->addMeta($varname, $attribute);
                 }
-                if ($annotation instanceof DnLinkArray) {
-                    $varname=$publicAttr->getName();
-                    $instanceMetadataCollection->addArrayOfLink($varname, $annotation->getValue());
-                }
                 if ($annotation instanceof Sequence) {
                     $varname=$publicAttr->getName();
                     $instanceMetadataCollection->addSequence($varname, $annotation->getValue());
-                }
-                if ($annotation instanceof DnPregMatch) {
-                    $varname=$publicAttr->getName();
-                    $instanceMetadataCollection->addRegex($varname, $annotation->getValue());
-                }
-                if ($annotation instanceof ParentDn) {
-                    $varname=$publicAttr->getName();
-                    $instanceMetadataCollection->addParentLink($varname, $annotation->getValue());
                 }
                 if ($annotation instanceof ArrayField) {
                     $instanceMetadataCollection->addArrayField($varname);
@@ -577,7 +543,7 @@ class LdapEntityManager
      * @param unknown_type $dn
      * @param array        $entry
      */
-    private function ldapPersist($dn, LdapEntity $entity)
+    protected function ldapPersist($dn, LdapEntity $entity)
     {
         $this->connect();
         $entry = $this->entityToEntry($entity);
@@ -592,7 +558,7 @@ class LdapEntityManager
      * Look at an entry's attributes and determine, relative to it's state before being modified,
      * the operation for each attribute.
      */
-    private function getEntityOperands(LdapEntity $original, LdapEntity $modified, $notRetrievedAttributes = [], $operationalAttributes = []) {
+    protected function getEntityOperands(LdapEntity $original, LdapEntity $modified, $notRetrievedAttributes = [], $operationalAttributes = []) {
         $operands = [ self::OPERAND_MOD => [], self::OPERAND_DEL => [], self::OPERAND_ADD => [] ];
         $modifiedEntry = $this->entityToEntry($modified);
         $originalEntry = $this->entityToEntry($original);
@@ -648,7 +614,7 @@ class LdapEntityManager
      *
      * @return array
      */
-    private function splitArrayForUpdate($entry, $currentEntity = null)
+    protected function splitArrayForUpdate($entry, $currentEntity = null)
     {
         $toModify = array_filter(
             $entry,
@@ -689,7 +655,7 @@ class LdapEntityManager
      * @param LdapEntity $original
      * @throws Exception
      */
-    private function ldapUpdate($dn, LdapEntity $modified, LdapEntity $original, $clearedAttributes = [])
+    protected function ldapUpdate($dn, LdapEntity $modified, LdapEntity $original, $clearedAttributes = [])
     {
         $updated = FALSE;
         $this->connect();
@@ -768,20 +734,8 @@ class LdapEntityManager
             ldap_control_paged_result($this->ldapResource, $options['pageSize'], $options['pageCritical'], $this->pageCookie);
         }
 
-        // Discern subentryNodes for substituing into searchDN
-        $subentryNodes = empty($options['subentryNodes']) ? array() : $options['subentryNodes'];
-
         // Discern search DN
-        if (isset($options['searchDn'])) {
-            $searchDn = $options['searchDn'];
-        } else {
-            $searchDn = $this->twigRender($instanceMetadataCollection->getSearchDn(), ['entity' => $subentryNodes]);
-        }
-
-        if (empty($searchDn)) {
-            // throw new MissingSearchDn('Could not discern search DN while searching for '.$entityName);
-            $searchDn = '';
-        }
+        $searchDn = $options['searchDn'] ?? '';
 
         // Discern LDAP filter
         $objectClass = $instanceMetadataCollection->getObjectClass();
@@ -1057,7 +1011,7 @@ class LdapEntityManager
         return $entity;
     }
 
-    private function generateSequenceValue($dn)
+    protected function generateSequenceValue($dn)
     {
         // Connect if needed
         $this->connect();
@@ -1077,11 +1031,11 @@ class LdapEntityManager
         return $return;
     }
 
-    private function isSha1($str) {
+    protected function isSha1($str) {
         return (bool) preg_match('/^[0-9a-f]{40}$/i', $str);
     }
 
-    private function twigRender($templateString = null, $variables = null) {
+    protected function twigRender($templateString = null, $variables = null) {
         if (!$templateString) {
             return FALSE;
         }
@@ -1166,6 +1120,11 @@ class LdapEntityManager
             }
         }
         return $result;
+    }
+
+
+    public function isActiveDirectory() {
+        return $this->isActiveDirectory;
     }
 }
 

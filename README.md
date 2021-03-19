@@ -65,7 +65,6 @@ services:
  * Represents a ComExamplePerson object class, which is a subclass of InetOrgPerson
  * 
  * @ObjectClass("comExamplePerson")
- * @SearchDn("ou=people,dc=example,dc=come")
  * @Dn("uid={{ entity.uid }},ou=people,dc=example,dc=com")
  */
 class ComExamplePerson extends InetOrgPerson

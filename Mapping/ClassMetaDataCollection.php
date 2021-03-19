@@ -113,8 +113,12 @@ class ClassMetaDataCollection
     
     public function getMeta($key)
     {
-        if(isset($this->metadatas[$key])) {
-            return $this->metadatas[$key];
+        // normalize attribute name to find in meta
+        $metadatas = array_change_key_case($this->metadatas);
+        $key = strtolower($key);
+
+        if(isset($metadatas[$key])) {
+            return $metadatas[$key];
         }
         return null;
     }

@@ -32,8 +32,8 @@ use Ucsf\LdapOrmBundle\Ldap\Filter\LdapFilter;
 class Repository {
 
     protected $em, $it;
-    private $class;
-    private $entityName;
+    protected $class;
+    protected $entityName;
 
     /**
      * Build the LDAP repository for the given entity type (i.e. class)
