@@ -1,23 +1,7 @@
 <?php
-/***************************************************************************
- * Copyright (C) 1999-2012 Gadz.org                                        *
- * http://opensource.gadz.org/                                             *
- *                                                                         *
- * This program is free software; you can redistribute it and/or modify    *
- * it under the terms of the GNU General Public License as published by    *
- * the Free Software Foundation; either version 2 of the License, or       *
- * (at your option) any later version.                                     *
- *                                                                         *
- * This program is distributed in the hope that it will be useful,         *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of          *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
- * GNU General Public License for more details.                            *
- *                                                                         *
- * You should have received a copy of the GNU General Public License       *
- * along with this program; if not, write to the Free Software             *
- * Foundation, Inc.,                                                       *
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                   *
- ***************************************************************************/
+/**
+ * @author Jason Gabler <jason.gabler@ucsf.edu>
+ */
 
 namespace Ucsf\LdapOrmBundle\Ldap;
 
@@ -32,7 +16,6 @@ use Ucsf\LdapOrmBundle\Annotation\Ldap\Repository as RepositoryAttribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Operational;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Sequence;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
-use Ucsf\LdapOrmBundle\Components\GenericIterator;
 use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
 use Ucsf\LdapOrmBundle\Entity\Ldap\LdapEntity;
 use Ucsf\LdapOrmBundle\Ldap\Filter\LdapFilter;
@@ -43,8 +26,7 @@ use Symfony\Bridge\Monolog\Logger;
 /**
  * Entity Manager for LDAP
  *
- * @author Mathieu GOULIN <mathieu.goulin@gadz.org>
- * @author Jason Gabler <jasongabler@gmail.com>
+ * @author Jason Gabler <jason.gabler@ucsf.edu>
  */
 class LdapEntityManager
 {
@@ -59,6 +41,7 @@ class LdapEntityManager
     protected $passwordType 	= "";
     protected $useTLS     	= FALSE;
     protected $isActiveDirectory = FALSE;
+    protected $followReferrals = 0;
 
     protected $ldapResource;
     protected $pageCookie 	= "";
@@ -93,7 +76,13 @@ class LdapEntityManager
     }
 
 
-    public function setConfig(array $config) {
+    /**
+     * A more manual inroad to manipulating the configuration
+     *
+     * @param array $config
+     */
+    public function setConfig(array $config) : void
+    {
         $this->uri        	        = $config['uri'] ?? null;
         $this->bindDN     	        = $config['bind_dn'] ?? null;
         $this->password   	        = $config['password'] ?? null;
@@ -104,9 +93,62 @@ class LdapEntityManager
 
 
     /**
+     * Return an array of the following configuration values:
+     *
+     *  'uri'               => $this->uri,
+     *  'bind_dn'           => $this->bindDN,
+     *  'password'          => $this->pssword,
+     *  'password_type'     => $this->passwordType,
+     *  'use_tls'           => $this->useTLS,
+     *  'active_directory'  => $this->isActiveDirectory
+     *
+     * @return array as described above
+     */
+    public function getConfig() :array
+    {
+        return [
+            'uri'               => $this->uri,
+            'bind_dn'           => $this->bindDN,
+            'password'          => $this->pssword,
+            'password_type'     => $this->passwordType,
+            'use_tls'           => $this->useTLS,
+            'active_directory'  => $this->isActiveDirectory
+        ];
+    }
+
+
+    /**
+     * Manually set the LDAP_OPT_REFERRALS option for the next connect().
+     *
+     * @param int $state
+     * @throws \Exception
+     */
+    public function setFollowReferrals(int $state) : void
+    {
+        if ($this->followReferrals !== $state) {
+            $this->disconnect();
+            $this->followReferrals = $state;
+            $this->connect();
+        }
+    }
+
+
+    /**
+     * A wrapper for ldap_close()
+     */
+    public function disconnect() : void
+    {
+        if ($this->ldapResource) {
+            ldap_close($this->ldapResource);
+            $this->ldapResource = null;
+        }
+    }
+
+
+    /**
      * Connect to LDAP service
      *
-     * @return LDAP resource
+     * @return LDAP resource or FALSE upon error
      */
     protected function connect()
     {
@@ -117,7 +159,7 @@ class LdapEntityManager
 
         $this->ldapResource = ldap_connect($this->uri);
         ldap_set_option($this->ldapResource, LDAP_OPT_PROTOCOL_VERSION, 3);
-        ldap_set_option($this->ldapResource, LDAP_OPT_REFERRALS, 0);
+        ldap_set_option($this->ldapResource, LDAP_OPT_REFERRALS, $this->followReferrals);
 
         // Switch to TLS, if configured
         if ($this->useTLS) {
@@ -172,10 +214,14 @@ class LdapEntityManager
             'filter' => [ $uniqueIdentifier['attribute'] => $uniqueIdentifier['value'] ]
         ]);
 
+        if (count($entities) > 1) {
+            throw new \Exception('Multiple entities found for supposedly unique DN of "'.$entity->getDn().'"');
+        }
+
         if ($checkOnly) {
             return (count($entities) > 0);
         } else {
-            return $entities;
+            return (count($entities) > 0) ? $entities[0] : false;
         }
     }
 
@@ -187,7 +233,7 @@ class LdapEntityManager
      * @return array
      * @throws \Exception
      */
-    public function getUniqueIdentifier(LdapEntity $entity, $throwExceptions = TRUE) {
+    public function getUniqueIdentifier(LdapEntity $entity, $throwExceptions = true) {
         $entityClass = get_class($entity);
         $meta = $this->getClassMetadata($entityClass);
         $uniqueIdentifierAttr = $meta->getUniqueIdentifier();
@@ -422,7 +468,26 @@ class LdapEntityManager
      * Persist an instance in Ldap
      * @param unknown_type $entity
      */
-    public function persist($entity, $checkMust = true, $originalEntity = null, $clearedAttributes = [])
+
+
+    /**
+     * "Upsert" an LDAP entity to LDAP.
+     *
+     * Using the $entityExists parameter is not necessary, but can save unnecessary calls to LDAP. If not specified
+     * this method will attempt to retrieve the record from AD to determine whether or not it already exists so that
+     * it can determine if an insert or an update is required. If the value is true, the method will use the given
+     * entity as the source for the record to use in ldap_modify/ldap_mod_del, without checking. If false, an ldap_add
+     * will be performed with no checking.
+     *
+     * @param $entity The entity representing the LDAP record to persist
+     * @param null $entityExists Does this entity already exist in LDAP? (Is this an update?)
+     * @param bool $checkMust If true, ensure that record will have data for all MUST attributes
+     * @param array $clearedAttributes List the attributes that have been cleared compared to the current state in LDAP
+     * @return bool True if persistence was successfull.
+     * @throws MissingMustAttributeException
+     * @throws \ReflectionException
+     */
+    public function persist($entity, $entityExists = null, $checkMust = true, $clearedAttributes = [])
     {
         if ($checkMust) {
             $this->checkMust($entity);
@@ -434,59 +499,80 @@ class LdapEntityManager
             $entity->setDn($dn);
         }
 
-        // test if entity already exists
-        if ($originalEntity == null) {
-            $result = $this->entityExists($entity, false);
-            $originalEntity = reset($result);
+        // If ldapPersist() is not forced through the $entityExists parameter, check whether or not the
+        // entry exists.
+        if ($entityExists !== FALSE) {
+            $entityExists = $this->entityExists($entity, false);
         }
 
-        if ($originalEntity === FALSE) {
+
+        if ($entityExists === FALSE) {
             return $this->ldapPersist($dn, $entity);
         } else {
-            return $this->ldapUpdate($dn, $entity, $originalEntity, $clearedAttributes);
+            return $this->ldapUpdate($dn, $entity, $entityExists, $clearedAttributes);
         }
     }
 
+
     /**
-     * Delete an instance in Ldap
-     * @param unknown_type $instance
+     * Delete an entity's record in LDAP
+     *
+     * @param $entity
+     * @throws \ReflectionException
      */
-    public function delete($instance)
+    public function delete(LdapEntity $entity)
     {
-        $dn = $this->buildEntityDn($instance);
-        $this->logger->debug('Delete in LDAP: ' . $dn );
-        $this->deleteByDn($dn, true);
+        $this->logger->debug('Delete in LDAP: ' . $entity->getDn() );
+        $this->deleteByDn($entity->getDn(), true);
         return;
     }
 
+
     /**
-     * Delete an entry in ldap by Dn
-     * @param string $dn
+     * Delete an entry in ldap by Dn.
+     *
+     * The recursive algorithm was coped from: https://www.php.net/manual/en/function.ldap-delete.php
+     *
+     * @param string The
+     */
+
+
+    /**
+     * Delete an entry in ldap by Dn.
+     *
+     * The recursive algorithm was coped from: https://www.php.net/manual/en/function.ldap-delete.php
+     *
+     * @param $dn
+     * @param bool $recursive
+     * @return mixed Returns the distinguished name of the deleted record or false if there was an error.
+     * @throws \Exception
      */
     public function deleteByDn($dn, $recursive=false)
     {
-        // Connect if needed
         $this->connect();
-
         $this->logger->debug('Delete (recursive=' . $recursive . ') in LDAP: ' . $dn );
 
-        if ($recursive == false) {
-            return(ldap_delete($this->ldapResource, $dn));
-        } else {
-            //searching for sub entries
+        if ($recursive != false) {
+            // Find sub-entries of the current level
             $sr=ldap_list($this->ldapResource, $dn, "ObjectClass=*", array(""));
             $info = ldap_get_entries($this->ldapResource, $sr);
-
+            // Delete sub-entries recursively
             for($i = 0; $i < $info['count']; $i++) {
-                //deleting recursively sub entries
-                $result=$this->deleteByDn($info[$i]['dn'], true);
-                if (!$result) {
-                    //return result code, if delete fails
-                    return($result);
-                }
+                return $this->deleteByDn($info[$i]['dn'], true);
             }
-            return(ldap_delete($this->ldapResource, $dn));
         }
+
+        try {
+            ldap_delete($this->ldapResource, $dn);
+            $r = $dn;
+        } catch (\Exception $e) {
+            $errno = ldap_errno($this->ldapResource);
+            $error = ldap_error($this->ldapResource);
+            $errstr = ldap_err2str($errno);
+            $r = false;
+        }
+
+        return $r;
     }
 
     /**
@@ -548,10 +634,20 @@ class LdapEntityManager
         $this->connect();
         $entry = $this->entityToEntry($entity);
         list($toInsert,) = $this->splitArrayForUpdate($entry);
-        // The dn is already specific in the ldap_add() call. Keeping it in $toInsert will cause an Object Class Violation.
+        // The dn is already specific in the ldap_add() call. Keeping it in $toInsert will cause an
+        // Object Class Violation or other DN-related violations.
         unset($toInsert['dn']);
+        unset($toInsert['distinguishedName']);
         $this->logger->debug("Insert $dn in LDAP : " . json_encode($toInsert));
-        return ldap_add($this->ldapResource, $dn, $toInsert);
+        $r = false;
+        try {
+            $r = ldap_add($this->ldapResource, $dn, $toInsert);
+        } catch (\Exception $e) {
+            $errno = ldap_errno($this->ldapResource);
+            $errstr = ldap_err2str($errno);
+        }
+
+        return $r;
     }
 
     /**
@@ -735,7 +831,7 @@ class LdapEntityManager
         }
 
         // Discern search DN
-        $searchDn = $options['searchDn'] ?? '';
+        $searchDn = $options['searchDn'] ?: '';
 
         // Discern LDAP filter
         $objectClass = $instanceMetadataCollection->getObjectClass();
@@ -860,30 +956,6 @@ class LdapEntityManager
         return $data;
     }
 
-    public function doRawLdapGetDn($rawResult)
-    {
-        return ldap_get_dn($this->ldapResource, $rawResult);
-    }
-
-    public function doRawLdapGetAttributes($rawResult)
-    {
-        return ldap_get_attributes($this->ldapResource, $rawResult);
-    }
-
-    public function doRawLdapCountEntries($rawResult)
-    {
-        return ldap_count_entries($this->ldapResource, $rawResult);
-    }
-
-    public function doRawLdapFirstEntry($rawResult)
-    {
-        return ldap_first_entry($this->ldapResource, $rawResult);
-    }
-
-    public function doRawLdapNextEntry($rawResult)
-    {
-        return ldap_next_entry($this->ldapResource, $rawResult);
-    }
 
     /**
      * @param $rawFilter
@@ -897,51 +969,45 @@ class LdapEntityManager
     {
         $this->connect();
         $this->logger->debug(sprintf("request on ldap root:%s with filter:%s", $searchDN, $rawFilter));
-        return ldap_search($this->ldapResource,
-            $searchDN,
-            $rawFilter,
-            $attributes,
-            0,
-            $count);
-    }
-
-    /**
-     * @param LdapFilter $filter
-     * @param $entityName
-     * @return null|LdapIterator
-     */
-    public function getIterator(LdapFilter $filter, $entityName) {
-        if (empty($this->iterator)) {
-            $this->iterator = new LdapIterator($filter, $entityName, $this);
+        if ($count) {
+            return @ldap_search($this->ldapResource,
+                $searchDN,
+                $rawFilter,
+                $attributes,
+                0,
+                $count);
+        } else {
+            return ldap_search($this->ldapResource,
+                $searchDN,
+                $rawFilter,
+                $attributes,
+                0,
+                $count);
         }
-        return $this->iterator;
-    }
-
-
-    public function cleanArray($array)
-    {
-        $newArray = array();
-        foreach (array_keys($array) as $key) {
-            $newArray[strtolower($key)] = $array[$key];
-        }
-
-        return $newArray;
     }
 
 
     /**
+     * Convert OpenLDAP entries to entity objects
+     *
      * @param $entityName
      * @param $entryData
-     * @return LdapEntity
+     * @return mixed
+     * @throws \ReflectionException
      */
     public function entryToEntity($entityName, $entryData)
     {
+        // Normalize $entryData to lower case
+        foreach ($entryData as $key => $val) {
+            unset($entryData[$key]);
+            $entryData[strtolower($key)] = $val;
+        }
+
+//        $dn = $entryData['distinguishedname'][0] ?? '';
+        $dn = $entryData['dn'] ?? '';
+        $entity = new $entityName();
 
         $instanceMetadataCollection = $this->getClassMetadata($entityName);
-
-        $entryData = $this->cleanArray($entryData);
-        $dn = $entryData['dn'];
-        $entity = new $entityName();
         $metaDatas = $instanceMetadataCollection->getMetadatas();
 
         // The 'cn' attribite is at the heart of LDAP entries and entities and is often required for
@@ -996,16 +1062,9 @@ class LdapEntityManager
             $setter = 'set' . ucfirst($attrName);
             $entity->$setter($matches[1]);
         }
-        if ($dn != '') {
-            $entity->setDn($dn);
-            foreach ($instanceMetadataCollection->getParentLink() as $attrName => $parentClass) {
-                $setter = 'set' . ucfirst($attrName);
-                $parentDn = preg_replace('/^[a-zA-Z0-9]*=[a-zA-Z0-9]*,/', '', $dn);
-                $link = $this->retrieveByDn($parentDn, $parentClass);
-                if (count($link) > 0) {
-                    $entity->$setter($link[0]);
-                }
-            }
+
+        if (empty($entity->getDistinguishedName())) {
+            $entity->setDistinguishedName($dn);
         }
 
         return $entity;
@@ -1086,6 +1145,7 @@ class LdapEntityManager
                 ],
                 $this->isActiveDirectory
             );
+            // Revert referral following for a search...
             $rawResult = $this->doRawLdapSearch($ldapFilter->format(), ['member'], null, $searchDn );
             $entries = ldap_get_entries($this->ldapResource, $rawResult);
 
@@ -1099,6 +1159,7 @@ class LdapEntityManager
                 $result = TRUE;
             }
         }
+
         return $result;
     }
 
@@ -1119,6 +1180,7 @@ class LdapEntityManager
                 throw new \Exception('Unable to remove "' . $memberDn . '" from group "' . $groupDn . '"": ' . $err);
             }
         }
+
         return $result;
     }
 

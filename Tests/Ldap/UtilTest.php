@@ -20,9 +20,7 @@ class UtilTest extends WebTestCase
     const AD_TEST_TIME_GMT = 'July 25, 2017 2:48:05.480000 AM';
     const AD_TEST_TIME_PDT = 'July 24, 2017 7:48:05.480000 PM';
     const AD_TEST_TIME_FORMAT = 'F j, Y g:i:s.u A';
-//    const AD_TEST_TIMESTAMP = '131454244854800000';
     const AD_TEST_TIMESTAMP = '131453992854800000';
-//    const AD_TEST_UNIXEPOCH = '1500950885';
     const AD_TEST_UNIXEPOCH = '1500925685';
 
     const LDAP_TEST_TIME = 'July 25, 2017 2:48:05 AM'; // GMT

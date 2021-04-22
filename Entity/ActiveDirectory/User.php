@@ -5,7 +5,6 @@ namespace Ucsf\LdapOrmBundle\Entity\ActiveDirectory;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ObjectClass;
-use Ucsf\LdapOrmBundle\Annotation\Ldap\Must;
 use IAM\DirectoryServicesBundle\Util\Phone;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\UniqueIdentifier;
 use Ucsf\LdapOrmBundle\Entity\Ldap\OrganizationalPerson;
@@ -121,8 +120,8 @@ class User extends OrganizationalPerson {
     public function getDomain() {
         if (!$this->domain) {
             $domain = null;
-            if (!empty($this->dn)) {
-                $rdns = explode(',dc=', strtolower($this->dn));
+            if (!empty($this->distinguishedName)) {
+                $rdns = explode(',dc=', strtolower($this->distinguishedName));
                 array_shift($rdns);
                 $this->domain = implode('.', $rdns);
             }
@@ -165,11 +164,6 @@ class User extends OrganizationalPerson {
      * @Attribute("displayname")
      */
     public $displayname;
-
-    /**
-     * @Attribute("distinguishedName")
-     */
-    public $distinguishedName;
 
     /**
      * @Attribute("employeeId")
@@ -437,6 +431,27 @@ class User extends OrganizationalPerson {
     public $street;
 
     /**
+     * @Attribute("unicodePwd")
+     */
+    public $unicodePwd;
+
+    /**
+     * @return mixed
+     */
+    public function getUnicodePwd()
+    {
+        return $this->unicodePwd;
+    }
+
+    /**
+     * @param mixed $unicodePwd
+     */
+    public function setUnicodePwd($unicodePwd): void
+    {
+        $this->unicodePwd = $unicodePwd;
+    }
+
+    /**
      * @return mixed
      */
     public function getStreet()
@@ -541,9 +556,6 @@ class User extends OrganizationalPerson {
         return $this->department;
     }
 
-    public function getDistinguishedName() {
-        return $this->distinguishedName;
-    }
 
     public function getEmployeeID() {
         return $this->employeeId;
@@ -759,10 +771,6 @@ class User extends OrganizationalPerson {
 
     public function setDisplayName($displayname) {
         $this->displayname = $displayname;
-    }
-
-    public function setDistinguishedName($distinguishedName) {
-        $this->distinguishedName = $distinguishedName;
     }
 
     public function setEmployeeID($employeeId) {

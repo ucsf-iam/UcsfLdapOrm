@@ -75,10 +75,7 @@ class Repository {
                 break;
 
             default:
-                throw new \BadMethodCallException(
-                    "Undefined method '$method'. The method name must start with " .
-                    "either findBy or findOneBy!"
-                );
+                return $this->em->$method(...$arguments);
         }
         return $this->$method(
                     $by, // attribute name
@@ -135,7 +132,7 @@ class Repository {
      * @return An array of LdapEntity objects
      */
     public function findBy($varname, $value, $attributes = null) {
-        $options = array();
+        $options = [];
         $options['filter'] = new LdapFilter(array($varname => $value));
         if ($attributes != null) {
             $options['attributes'] = $attributes;
@@ -155,7 +152,7 @@ class Repository {
     public function findOneBy($varname, $value, $attributes) {
         $r = $this->findBy($varname, $value, $attributes);
         if (empty($r[0])) {
-            return array();
+            return null;
         } else {
             return $r[0];
         }        

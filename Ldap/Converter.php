@@ -25,13 +25,11 @@ use Ucsf\LdapOrmBundle\Entity\DateTimeDecorator;
 
 /**
  * Converter for LDAP
- * 
- * @author Mathieu GOULIN <mathieu.goulin@gadz.org>
- *         DateTimeDecorator Modifications by Eric Bourderau <eric.bourderau@soce.fr>
+ *
+ * @author Jason Gabler <jason.gabler@ucsf.edu>
  */
 class Converter
 {
-    // round((1970-1601)/4) = round(92.25) = 92
     const UNIX_EPOCH_DIFFERENCE = ((1970-1601) * 365 - 3 + 92 ) * 86400;
 
     /**

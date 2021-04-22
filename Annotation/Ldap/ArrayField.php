@@ -25,7 +25,7 @@ namespace Ucsf\LdapOrmBundle\Annotation\Ldap;
  * Annotation to tell attribute is multi-valued
  * 
  * @Annotation
- * @author Mathieu GOULIN <mathieu.goulin@gadz.org>
+ * @author Jason Gabler <jason.gabler@ucsf.edu>
  */
 final class ArrayField
 {

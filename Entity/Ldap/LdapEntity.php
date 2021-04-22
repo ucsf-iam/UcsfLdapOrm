@@ -79,7 +79,7 @@ class LdapEntity implements \JsonSerializable {
     /**
      * @param null $domain
      */
-    protected function setDomain($domain = null) {
+    public function setDomain($domain = null) {
         if ($domain) {
             $this->domain = $domain;
         } else {
@@ -124,10 +124,6 @@ class LdapEntity implements \JsonSerializable {
      */
     protected $cn;
 
-    /**
-     * @Attribute("dn")
-     */
-    protected $dn;
 
     /**
      * @Attribute("whenChanged")
@@ -146,6 +142,19 @@ class LdapEntity implements \JsonSerializable {
         return $this->objectClass;
     }
 
+
+    /**
+     * @Attribute("distinguishedName")
+     */
+    public $distinguishedName;
+
+    public function setDistinguishedName($distinguishedName) {
+        $this->distinguishedName = $distinguishedName;
+    }
+
+    public function getDistinguishedName() {
+        return $this->distinguishedName;
+    }
 
     /**
      * @param null $objectClass
@@ -174,12 +183,12 @@ class LdapEntity implements \JsonSerializable {
 
     public function getDn()
     {
-        return $this->dn;
+        return $this->getDistinguishedName();
     }
 
     public function setDn($dn)
     {
-        $this->dn = $dn;
+        $this->setDistinguishedName($dn);
     }
 
     /**
