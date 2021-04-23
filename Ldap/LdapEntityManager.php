@@ -552,18 +552,24 @@ class LdapEntityManager
         $this->connect();
         $this->logger->debug('Delete (recursive=' . $recursive . ') in LDAP: ' . $dn );
 
-        if ($recursive != false) {
+        if ($recursive) {
             // Find sub-entries of the current level
-            $sr=ldap_list($this->ldapResource, $dn, "ObjectClass=*", array(""));
-            $info = ldap_get_entries($this->ldapResource, $sr);
-            // Delete sub-entries recursively
-            for($i = 0; $i < $info['count']; $i++) {
-                return $this->deleteByDn($info[$i]['dn'], true);
+            try {
+                $sr = ldap_list($this->ldapResource, $dn, "ObjectClass=*", array(""));
+                $info = ldap_get_entries($this->ldapResource, $sr);
+                // Delete sub-entries recursively
+                for ($i = 0; $i < $info['count']; $i++) {
+                    return $this->deleteByDn($info[$i]['dn'], true);
+                }
+            } catch (\Exception $e) {
+                $errno = ldap_errno($this->ldapResource);
+                $error = ldap_error($this->ldapResource);
+                $errstr = ldap_err2str($errno);
             }
         }
 
         try {
-            ldap_delete($this->ldapResource, $dn);
+            $ldr = ldap_delete($this->ldapResource, $dn);
             $r = $dn;
         } catch (\Exception $e) {
             $errno = ldap_errno($this->ldapResource);
@@ -1124,11 +1130,44 @@ class LdapEntityManager
      * @return bool Returns TRUE when the object is successfully added to the group or was already a member.
      * @throws \Ucsf\LdapOrmBundle\Exception\Filter\InvalidLdapFilterException
      */
-    public function groupAdd($groupDn, $memberDn) {
+    public function groupAdd($groupDn, $memberDn)
+    {
         $this->connect();
 
+        preg_match('/dc=.*/', strtolower($groupDn), $matches);
+        $groupDomain = $matches[0];
+        preg_match('/dc=.*/', strtolower($memberDn), $matches);
+        $memberDomain = $matches[0];
+
+        // If the domains of the group and the member to remove do not match, then this is a referral (or an error).
+        // Usually following referrals is turned off, but for this call it should be turned on, and then afterwards
+        // turned off again.
+        if ($groupDomain != $memberDomain && $this->followReferrals == false) {
+            $this->setFollowReferrals(true);
+        }
         $groupInfo['member'] = $memberDn;
-        $result = @ldap_mod_add($this->ldapResource, $groupDn, $groupInfo);
+
+        // All things regarding the group and the prospective member need to be in place for the add to actually
+        // succeed. This is especially true when working with AD and even more so when adding subdomain records
+        // to parent domain group. As far as I know, there is no way to preemtively ensure that the subdomain record
+        // is available to the parent domain, so try the add and if it fails, wait a few seconds and try again.
+        // Time out in 1 min after 6 sec increments of waiting.
+        $added = false;
+        $cnt = 1;
+        while ($cnt < 10 && !$added) {
+            try {
+                $result = ldap_mod_add($this->ldapResource, $groupDn, $groupInfo);
+                $added = true;
+            } catch (\Exception $e) {
+                $err = ldap_error($this->ldapResource);
+                sleep(6);
+            }
+        }
+
+        // Now turn off referrals again
+        if ($groupDomain != $memberDomain && $this->followReferrals == true) {
+            $this->setFollowReferrals(false);
+        }
 
         if (!$result) {
             // The FALSE result might be because the user is already in the group. Check to see if it is in the group
@@ -1145,9 +1184,11 @@ class LdapEntityManager
                 ],
                 $this->isActiveDirectory
             );
+
             // Revert referral following for a search...
             $rawResult = $this->doRawLdapSearch($ldapFilter->format(), ['member'], null, $searchDn );
             $entries = ldap_get_entries($this->ldapResource, $rawResult);
+            $err = ldap_error($this->ldapResource);
 
             // If the object was not found as part of the group, and we've already received a FALSE from ldap_mod_add(),
             // then we have a real problem. Otherwise, if the object was found we know it's already a group member
