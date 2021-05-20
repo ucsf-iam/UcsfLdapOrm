@@ -162,6 +162,12 @@ class User extends OrganizationalPerson {
     public $department;
 
     /**
+     * @Attribute("departmentNumber")
+     * @ArrayField()
+     */
+    public $departmentNumber;
+
+    /**
      * @Attribute("displayname")
      */
     public $displayname;
@@ -991,6 +997,16 @@ class User extends OrganizationalPerson {
     public function setLockoutThreshold($lockoutThreshold)
     {
         $this->lockoutThreshold = $lockoutThreshold;
+    }
+
+    public function getDepartmentNumber()
+    {
+        return $this->departmentNumber;
+    }
+
+    public function setDepartmentNumber($departmentNumber)
+    {
+        $this->departmentNumber = $departmentNumber;
     }
 
 
