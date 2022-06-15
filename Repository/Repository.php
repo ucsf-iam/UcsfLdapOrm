@@ -83,7 +83,8 @@ class Repository {
         return $this->$method(
                     $by, // attribute name
                     $arguments[0], // attribute value
-                    empty($arguments[1]) ? null : $arguments[1] // attribute list
+                    empty($arguments[1]) ? null : $arguments[1], // attribute list
+                    empty($arguments[2]) ? [] : $arguments[2] // LDAP options
                 );
     }
 
@@ -134,8 +135,7 @@ class Repository {
      * @param string $value LDAP vattribute value
      * @return An array of LdapEntity objects
      */
-    public function findBy($varname, $value, $attributes = null) {
-        $options = array();
+    public function findBy($varname, $value, $attributes = null, $options = []) {
         $options['filter'] = new LdapFilter(array($varname => $value));
         if ($attributes != null) {
             $options['attributes'] = $attributes;

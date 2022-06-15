@@ -22,6 +22,7 @@
 namespace Ucsf\LdapOrmBundle\Ldap;
 
 use Doctrine\Common\Annotations\Reader;
+use Symfony\Component\Config\Definition\Exception\Exception;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\ArrayField;
 use Ucsf\LdapOrmBundle\Annotation\Ldap\Attribute;
@@ -57,6 +58,11 @@ class LdapEntityManager
     const OPERAND_ADD = 'add';
     const OPERAND_MOD = 'mod';
     const OPERAND_DEL = 'del';
+    const URI_RE = '/^(([^:\/\s]+):\/?\/?([^\/\s@]*@)?([^\/@:]*)?:?(\d+)?)?(\/[^?]*)?(\?([^#]*))?(#[\s\S]*)?$/';
+    const URI_RE_SCHEME = 2;
+    const URI_RE_HOST = 4;
+    const URI_RE_PORT = 5;
+
 
     private $uri        	= "";
     private $bindDN     	= "";
@@ -102,6 +108,24 @@ class LdapEntityManager
         // Don't permit multiple connect() calls to run
         if ($this->ldapResource) {
             return;
+        }
+
+        // Initial check that URI can be contacted
+        preg_match(self::URI_RE, $this->uri, $uriParts);
+        if (empty($uriParts[self::URI_RE_PORT])) {
+            if (strtolower($uriParts[self::URI_RE_SCHEME]) == 'ldaps') {
+                $uriParts[self::URI_RE_PORT] = '636';
+            } else {
+                $uriParts[self::URI_RE_PORT] = '389';
+            }
+
+        }
+        try {
+            $op = fsockopen($uriParts[self::URI_RE_HOST], $uriParts[self::URI_RE_PORT], $errno, $errstr, 5);
+        } catch (\Exception $e) {
+            $msg = 'Cannot make network connection to LDAP server: ' . $this->uri;
+            $this->logger->warning($msg);
+            throw new \Exception($msg);
         }
 
         $this->ldapResource = ldap_connect($this->uri);
