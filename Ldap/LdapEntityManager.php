@@ -120,9 +120,13 @@ class LdapEntityManager
             }
 
         }
+        $op = FALSE;
         try {
             $op = fsockopen($uriParts[self::URI_RE_HOST], $uriParts[self::URI_RE_PORT], $errno, $errstr, 5);
         } catch (\Exception $e) {
+            $op = FALSE;
+        }
+        if ($op === FALSE) {
             $msg = 'Cannot make network connection to LDAP server: ' . $this->uri;
             $this->logger->warning($msg);
             throw new \Exception($msg);
